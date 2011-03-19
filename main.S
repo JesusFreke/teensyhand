@@ -1,13 +1,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-.section .vectors
-
-  __vectors:
-    RJMP main
-
-
-
 .text
 
   .global main
