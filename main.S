@@ -1,17 +1,18 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include "io.h"
 
 .text
     .global main
     main:
-        sbi _SFR_IO_ADDR(DDRD),6
+        sbi IO_DDRD, 6
 
         loop:
-            sbi _SFR_IO_ADDR(PORTD),6
+            sbi IO_PORTD, 6
 
-            ldi r16,0xFF
+            ldi r16, 0xFF
             delay11:
-                ldi r17,0xFF
+                ldi r17, 0xFF
 
                 delay12:
                     nop
@@ -49,11 +50,11 @@
                 dec r16
                 brne delay11
 
-            cbi _SFR_IO_ADDR(PORTD),6
+            cbi IO_PORTD, 6
 
-            ldi r16,0xFF
+            ldi r16, 0xFF
             delay21:
-                ldi r17,0xFF
+                ldi r17, 0xFF
 
                 delay22:
                     nop
