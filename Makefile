@@ -1,6 +1,6 @@
 MODULE=teensytest
 
-SRCS=main.S
+SRCS=$(wildcard *.S)
 OBJS=$(SRCS:.S=.o)
 
 all: $(MODULE).hex
