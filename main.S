@@ -2,94 +2,92 @@
 #include <avr/interrupt.h>
 
 .text
+    .global main
+    main:
+        sbi _SFR_IO_ADDR(DDRD),6
 
-  .global main
-  main:
-    sbi _SFR_IO_ADDR(DDRD),6
+        loop:
+            sbi _SFR_IO_ADDR(PORTD),6
 
-    loop:
-       sbi _SFR_IO_ADDR(PORTD),6
-       
-       ldi r16,0xFF
-       delay11:
-         ldi r17,0xFF
-         
-         delay12:
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           dec r17
+            ldi r16,0xFF
+            delay11:
+                ldi r17,0xFF
 
-           brne delay12
+                delay12:
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    dec r17
 
-         dec r16
-         brne delay11
+                    brne delay12
 
-       cbi _SFR_IO_ADDR(PORTD),6
+                dec r16
+                brne delay11
 
-       ldi r16,0xFF
-       delay21:
-         ldi r17,0xFF
-         
-         delay22:
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           nop
-           dec r17
-           brne delay22
+            cbi _SFR_IO_ADDR(PORTD),6
 
-         dec r16
-         brne delay21
+            ldi r16,0xFF
+            delay21:
+                ldi r17,0xFF
 
-       rjmp loop
-  
+                delay22:
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    nop
+                    dec r17
+                    brne delay22
+
+                dec r16
+                brne delay21
+
+            rjmp loop
