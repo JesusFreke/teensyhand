@@ -10,12 +10,20 @@
         ;enable interrupts
         sei
 
-        ;enable interrupt on timer overflow
-        ldi r16, 0b1
+        ;enable interrupt on timer compare match
+        ldi r16, MASK(OCIE1A)
         sts TIMSK1, r16
 
-        ;select clk/64 and start the timer
-        ldi r16, 0b011
+        ;1s delay @ 2mhz
+        ldi r16, 0x7A
+        sts OCR1AH, r16
+        ldi r16, 0x12
+        sts OCR1AL, r16
+
+        ;select CTC mode using OCR1A register
+        ;select clk/64
+        ;start the timer
+        ldi r16, MASK(WGM12) | TIMER_CLK_64
         sts TCCR1B, r16
 
         loop:

@@ -16,3 +16,7 @@
 #define IO_PINF _SFR_IO_ADDR(PINF)
 #define IO_DDRF _SFR_IO_ADDR(DDRF)
 #define IO_PORTF _SFR_IO_ADDR(PORTF)
+
+#define MASK(x) 1<<x
+
+#define TIMER_CLK_64 0b011

@@ -23,10 +23,10 @@ __vectors:
 /*T2COMPB*/     ISR nop
 /*T2OVF*/       ISR nop
 /*T1CAPT*/      ISR nop
-/*T1COMPA*/     ISR nop
+/*T1COMPA*/     ISR RJMP t1_int
 /*T1COMPB*/     ISR nop
 /*T1COMPC*/     ISR nop
-/*T1OVF*/       ISR RJMP t1_int
+/*T1OVF*/       ISR nop
 /*T0COMPA*/     ISR nop
 /*T0COMPB*/     ISR nop
 /*T0OVF*/       ISR nop
