@@ -19,4 +19,11 @@
 
 #define MASK(x) 1<<x
 
-#define TIMER_CLK_64 0b011
+#define TIMER_CLK_OFF       0b000
+#define TIMER_CLK_1         0b001
+#define TIMER_CLK_8         0b010
+#define TIMER_CLK_64        0b011
+#define TIMER_CLK_256       0b100
+#define TIMER_CLK_1024      0b101
+#define TIMER_CLK_EXT_RISE  0b110
+#define TIMER_CLK_EXT_FALL  0b111
