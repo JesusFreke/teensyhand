@@ -27,3 +27,6 @@
 #define TIMER_CLK_1024      0b101
 #define TIMER_CLK_EXT_RISE  0b110
 #define TIMER_CLK_EXT_FALL  0b111
+
+#define USB_PLL_4           0b011 << 2
+#define USB_PLL_8           0b101 << 2

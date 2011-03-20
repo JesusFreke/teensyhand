@@ -7,8 +7,40 @@
     main:
         sbi IO_DDRD, 6
 
+        ;enable usb pad regulator and select usb device mode
+        ldi r16, MASK(UIMOD) | MASK(UVREGE)
+        sts UHWCON, r16
+
+        ;enable USB module, with clock frozen
+        ldi r16, MASK(USBE) | MASK(FRZCLK)
+        sts USBCON, r16
+
+        ;set USB PLL prescalar value
+        ldi r16, USB_PLL_8 | MASK(PLLE)
+        sts PLLCSR, r16
+
+        ;wait for USB PLL lock
+        pll_lock:
+            lds r16, PLLCSR
+            bst r16, PLOCK
+            brtc pll_lock
+
+        ;enable VBUS pad
+        ldi r16, MASK(USBE) | MASK(OTGPADE)
+        sts USBCON, r16
+
+        ;attach usb
+        ldi r16, 0
+        sts UDCON, r16
+
+        ;enable end of reset interrupt
+        ldi r16, MASK(EORSTE)
+        sts UDIEN, r16
+
         ;enable interrupts
         sei
+
+        RJMP loop
 
         ;enable interrupt on timer compare match
         ldi r16, MASK(OCIE1A)
@@ -29,6 +61,10 @@
         loop:
             RJMP loop
 
+    .global usb_gen
+    usb_gen:
+        sbi IO_PORTD, 6
+        reti
 
     .global t1_int
     t1_int:

@@ -6,7 +6,7 @@
 .section .vectors
 
 __vectors:
-/*RESET*/       ISR RJMP main
+/*RESET*/       ISR rjmp main
 /*INT0*/        ISR nop
 /*INT1*/        ISR nop
 /*INT2*/        ISR nop
@@ -16,14 +16,14 @@ __vectors:
 /*INT6*/        ISR nop
 /*INT7*/        ISR nop
 /*PCINT0*/      ISR nop
-/*USBGEN*/      ISR nop
-/*USBEND*/      ISR nop
+/*USBGEN*/      ISR rjmp usb_gen
+/*USBENP*/      ISR nop
 /*WDT*/         ISR nop
 /*T2COMPA*/     ISR nop
 /*T2COMPB*/     ISR nop
 /*T2OVF*/       ISR nop
 /*T1CAPT*/      ISR nop
-/*T1COMPA*/     ISR RJMP t1_int
+/*T1COMPA*/     ISR rjmp t1_int
 /*T1COMPB*/     ISR nop
 /*T1COMPC*/     ISR nop
 /*T1OVF*/       ISR nop
