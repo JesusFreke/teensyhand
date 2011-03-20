@@ -17,7 +17,7 @@ __vectors:
 /*INT7*/        ISR reti
 /*PCINT0*/      ISR reti
 /*USBGEN*/      ISR rjmp usb_gen
-/*USBENP*/      ISR reti
+/*USBENP*/      ISR rjmp usb_enp
 /*WDT*/         ISR reti
 /*T2COMPA*/     ISR reti
 /*T2COMPB*/     ISR reti

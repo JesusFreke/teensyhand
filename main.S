@@ -63,6 +63,47 @@
 
     .global usb_gen
     usb_gen:
+        lds r16, UDINT
+        sbrc r16, EORSTI
+        call eor_int
+
+        ;clear USB device interrupts
+        ldi r16, 0
+        sts UDINT, r16
+
+        reti
+
+    eor_int:
+        ;select ep0
+        ldi r16, 0
+        sts UENUM, r16
+
+        ;enable ep0
+        ldi r16, MASK(EPEN)
+        sts UECONX, r16
+
+        ;configure ep0
+        ldi r16, USB_EPTYPE_CONTROL | USB_EPDIR_OUT
+        sts UECFG0X, r16
+
+        ldi r16, USB_EPSIZE_8 | USB_EPBANK_1 | MASK(ALLOC)
+        sts UECFG1X, r16
+
+        ;enable setup packet interrupt
+        ldi r16, MASK(RXSTPE)
+        sts UEIENX, r16
+
+        ret
+
+    .global usb_enp
+    usb_enp:
+        ;check for setup interrupt
+        lds r16, UEINTX
+        bst r16, RXSTPI
+        brts setup_int
+        reti
+
+    setup_int:
         sbi IO_PORTD, 6
         reti
 

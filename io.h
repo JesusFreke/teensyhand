@@ -30,3 +30,21 @@
 
 #define USB_PLL_4           0b011 << 2
 #define USB_PLL_8           0b101 << 2
+
+#define USB_EPTYPE_CONTROL  0b00 << 6
+#define USB_EPTYPE_ISO      0b01 << 6
+#define USB_EPTYPE_BULK     0b10 << 6
+#define USB_EPTYPE_INT      0b11 << 6
+
+#define USB_EPDIR_OUT       0b0
+#define USB_EPDIR_IN        0b1
+
+#define USB_EPSIZE_8        0b000 << 4
+#define USB_EPSIZE_16       0b001 << 4
+#define USB_EPSIZE_32       0b010 << 4
+#define USB_EPSIZE_64       0b011 << 4
+#define USB_EPSIZE_128      0b100 << 4
+#define USB_EPSIZE_256      0b101 << 4
+
+#define USB_EPBANK_1        0b00 << 2
+#define USB_EPBANK_2        0b01 << 2
