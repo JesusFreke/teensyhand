@@ -1,6 +1,10 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "io.h"
+#include "usb.h"
+
+.equ zl, ZL
+.equ zh, ZH
 
 .text
     .global main
@@ -86,7 +90,7 @@
         ldi r16, USB_EPTYPE_CONTROL | USB_EPDIR_OUT
         sts UECFG0X, r16
 
-        ldi r16, USB_EPSIZE_8 | USB_EPBANK_1 | MASK(ALLOC)
+        ldi r16, USB_EPSIZE_32 | USB_EPBANK_1 | MASK(ALLOC)
         sts UECFG1X, r16
 
         ;enable setup packet interrupt
@@ -97,15 +101,188 @@
 
     .global usb_enp
     usb_enp:
-        ;check for setup interrupt
-        lds r16, UEINTX
-        bst r16, RXSTPI
-        brts setup_int
-        reti
+        ;check for endpoints with interrupts
+        lds r0, UEINT
 
-    setup_int:
-        sbi IO_PORTD, 6
-        reti
+        ;check EP0
+            bst r0, EPINT0
+            brtc usb_enp_end
+
+            ;select ep0
+            ldi r16, 0
+            sts UENUM, r16
+
+            call handle_setup_packet
+            ;call handle_ep_int
+    usb_enp_end:
+        ret
+
+    handle_setup_packet:
+        lds r15, UEINTX
+        sbrs r15, RXSTPI
+        ret
+
+        .equ r16_bmRequestType, r16
+        lds r16_bmRequestType, UEDATX
+        .equ r17_bRequest, r17
+        lds r17_bRequest, UEDATX
+        .equ r18_wValue_lo, r18
+        lds r18_wValue_lo, UEDATX
+        .equ r19_wValue_hi, r19
+        lds r19_wValue_hi, UEDATX
+        .equ r20_wIndex_lo, r20
+        lds r20_wIndex_lo, UEDATX
+        .equ r21_wIndex_hi, r21
+        lds r21_wIndex_hi, UEDATX
+        .equ r22_wLength_lo, r22
+        lds r22_wLength_lo, UEDATX
+        .equ r23_wLength_hi, r23
+        lds r23_wLength_hi, UEDATX
+
+        cbr r15, MASK(RXSTPI)
+        sts UEINTX, r15
+
+        cpi r17_bRequest, 0x0D
+        brsh setup_unknown
+
+        ldi zl, lo8(pm(setup_request_table))
+        ldi zh, hi8(pm(setup_request_table))
+        add zl, r17_bRequest
+        .equ r15_zero, r15
+        clr r15_zero
+        adc zh, r15_zero
+        ijmp
+
+        setup_request_table:
+        /*0x00*/ rjmp setup_get_status
+        /*0x01*/ rjmp setup_clear_feature
+        /*0x02*/ rjmp setup_unknown
+        /*0x03*/ rjmp setup_set_feature
+        /*0x04*/ rjmp setup_unknown
+        /*0x05*/ rjmp setup_set_address
+        /*0x06*/ rjmp setup_get_descriptor
+        /*0x07*/ rjmp setup_set_descriptor
+        /*0x08*/ rjmp setup_get_configuration
+        /*0x09*/ rjmp setup_set_configuration
+        /*0x0A*/ rjmp setup_get_interface
+        /*0x0B*/ rjmp setup_set_interface
+        /*0x0C*/ rjmp setup_synch_frame
+
+    setup_unknown:
+        ret
+
+    setup_get_status:
+        ret
+
+    setup_clear_feature:
+        ret
+
+    setup_set_feature:
+        ret
+
+    setup_set_address:
+        ret
+
+    setup_get_descriptor:
+        cpi r16_bmRequestType, 0b10000000
+        brne setup_get_descriptor_end
+
+        cpi r17_bRequest, 0x09
+        brsh setup_get_descriptor_end
+
+        ;switch based on requested descriptor type
+        ldi zl, lo8(pm(setup_get_descriptor_table))
+        ldi zh, hi8(pm(setup_get_descriptor_table))
+        add zl, r19_wValue_hi
+        adc zh, r15_zero
+        ijmp
+
+        setup_get_descriptor_end:
+        ret
+
+        setup_get_descriptor_table:
+        /*0x00*/ rjmp setup_get_descriptor_end
+        /*0x01*/ rjmp setup_get_device_descriptor
+        /*0x02*/ rjmp setup_get_configuration_descriptor
+        /*0x03*/ rjmp setup_get_string_descriptor
+        /*0x04*/ rjmp setup_get_interface_descriptor
+        /*0x05*/ rjmp setup_get_endpoint_descriptor
+        /*0x06*/ rjmp setup_get_device_qualifier_descriptor
+        /*0x07*/ rjmp setup_get_other_speed_configuration_descriptor
+        /*0x08*/ rjmp setup_get_interface_power_descriptor
+
+        setup_get_device_descriptor:
+            ;if more than 255 bytes are requested, round down to 255
+            ;(i.e. set the low byte to 255 - the high byte is otherwise ignored)
+            cpse r23_wLength_hi, r15_zero
+            ldi r22_wLength_lo, 0xFF
+
+            cpi r22_wLength_lo, 0
+            breq setup_get_descriptor_end
+
+            setup_get_device_descriptor_wait_for_txini:
+            lds r24, UEINTX
+            andi r24, MASK(TXINI)
+            breq setup_get_device_descriptor_wait_for_txini
+
+            ldi zl, lo8(DEVICE_DESCRIPTOR)
+            ldi zh, hi8(DEVICE_DESCRIPTOR)
+            cp r22_wLength_lo, 0x12
+
+            brlo setup_get_device_descriptor_send_loop
+            ldi r22_wLength_lo, 0x12
+
+            ;r22 now has the number of bytes to transfer
+            ;the lesser of the descriptor size or the requested number of bytes
+            setup_get_device_descriptor_send_loop:
+
+            lpm r24, z+
+            sts UEDATX, r24
+            dec r22_wLength_lo
+
+            cpse r22_wLength_lo, 0
+            rjmp setup_get_device_descriptor_send_loop
+
+            lds r24, UEINTX
+            cbr r24, MASK(TXINI)
+            sts UEINTX, r24
+
+            sbi IO_PORTD, 6
+
+            ret
+        setup_get_configuration_descriptor:
+            ret
+        setup_get_string_descriptor:
+            ret
+        setup_get_interface_descriptor:
+            ret
+        setup_get_endpoint_descriptor:
+            ret
+        setup_get_device_qualifier_descriptor:
+            ret
+        setup_get_other_speed_configuration_descriptor:
+            ret
+        setup_get_interface_power_descriptor:
+            ret
+
+    setup_set_descriptor:
+        ret
+
+    setup_get_configuration:
+        ret
+
+    setup_set_configuration:
+        ret
+
+    setup_get_interface:
+        ret
+
+    setup_set_interface:
+        ret
+
+    setup_synch_frame:
+        ret
+
 
     .global t1_int
     t1_int:
@@ -119,3 +296,19 @@
         set_bit:
             sbi IO_PORTD, 6
             reti
+
+DEVICE_DESCRIPTOR:
+/*bLength*/             .byte 0x12
+/*bDescriptorType*/     .byte DESC_DEVICE
+/*bcdUSB*/              .word 0x0200
+/*bDeviceClass*/        .byte 0xFF
+/*bDeviceSubClass*/     .byte 0xFF
+/*bDeviceProtocol*/     .byte 0xFF
+/*bMaxPacketSize*/      .byte 0x20
+/*idVendor*/            .word 0xFEED
+/*idProduct*/           .word 0xFACE
+/*bcdDevice*/           .word 0xF00D
+/*iManufacturer*/       .byte 0x00
+/*iProduct*/            .byte 0x00
+/*iSerialNumber*/       .byte 0x00
+/*bNumConfigurations*/  .byte 0x01
