@@ -187,7 +187,7 @@
         cpi r16_bmRequestType, 0b10000000
         brne setup_get_descriptor_end
 
-        cpi r17_bRequest, 0x09
+        cpi r19_wValue_hi, 0x09
         brsh setup_get_descriptor_end
 
         ;switch based on requested descriptor type
