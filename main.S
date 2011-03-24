@@ -3,8 +3,8 @@
 #include "io.h"
 #include "usb.h"
 
-.equ zl, ZL
-.equ zh, ZH
+#define zl ZL
+#define zh ZH
 
 .text
     .global main
@@ -118,29 +118,29 @@
         ret
 
     handle_setup_packet:
-        lds r15, UEINTX
-        sbrs r15, RXSTPI
+        lds r24, UEINTX
+        sbrs r24, RXSTPI
         ret
 
-        .equ r16_bmRequestType, r16
+        #define r16_bmRequestType r16
         lds r16_bmRequestType, UEDATX
-        .equ r17_bRequest, r17
+        #define r17_bRequest r17
         lds r17_bRequest, UEDATX
-        .equ r18_wValue_lo, r18
+        #define r18_wValue_lo r18
         lds r18_wValue_lo, UEDATX
-        .equ r19_wValue_hi, r19
+        #define r19_wValue_hi r19
         lds r19_wValue_hi, UEDATX
-        .equ r20_wIndex_lo, r20
+        #define r20_wIndex_lo r20
         lds r20_wIndex_lo, UEDATX
-        .equ r21_wIndex_hi, r21
+        #define r21_wIndex_hi r21
         lds r21_wIndex_hi, UEDATX
-        .equ r22_wLength_lo, r22
+        #define r22_wLength_lo r22
         lds r22_wLength_lo, UEDATX
-        .equ r23_wLength_hi, r23
+        #define r23_wLength_hi r23
         lds r23_wLength_hi, UEDATX
 
-        cbr r15, MASK(RXSTPI)
-        sts UEINTX, r15
+        cbr r24, MASK(RXSTPI)
+        sts UEINTX, r24
 
         cpi r17_bRequest, 0x0D
         brsh setup_unknown
@@ -148,7 +148,7 @@
         ldi zl, lo8(pm(setup_request_table))
         ldi zh, hi8(pm(setup_request_table))
         add zl, r17_bRequest
-        .equ r15_zero, r15
+        #define r15_zero r15
         clr r15_zero
         adc zh, r15_zero
         ijmp
@@ -240,8 +240,7 @@
             sts UEDATX, r24
             dec r22_wLength_lo
 
-            cpse r22_wLength_lo, 0
-            rjmp setup_get_device_descriptor_send_loop
+            brne setup_get_device_descriptor_send_loop
 
             lds r24, UEINTX
             cbr r24, MASK(TXINI)
