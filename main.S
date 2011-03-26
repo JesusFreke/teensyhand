@@ -333,7 +333,7 @@
                 ;string 0 - lang id table
                 ldi zl, lo8(STRING_0)
                 ldi zh, hi8(STRING_0)
-                ldi r24, lo8(STRING_0_END - STRING_0)
+                ldi r24, STRING_0_END - STRING_0
                 rjmp send_string_descriptor
                 ;string 1 - manufacturer
                 ldi zl, lo8(STRING_1)
