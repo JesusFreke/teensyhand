@@ -4,10 +4,13 @@ SRCS=$(wildcard *.S)
 OBJS=$(SRCS:.S=.o)
 
 all: $(MODULE).hex
-
+list: all $(MODULE).lst
 
 %.o: %.S
 	@avr-gcc -nostdlib -mmcu=at90usb1286 -c $< -o $@
+
+%.lst: %.elf
+	@avr-objdump --disassemble $< > $@
 
 $(MODULE).elf : $(MODULE).ld $(OBJS)
 	@avr-gcc -nostdlib -mmcu=at90usb1286 -Wl,-T$(MODULE).ld $(OBJS) -o $@
@@ -19,6 +22,7 @@ clean:
 	@rm -rf *.o
 	@rm -rf *.elf
 	@rm -rf *.hex
+	@rm -rf *.lst
 
 install: $(MODULE).hex
 	@echo install: waiting for device...
