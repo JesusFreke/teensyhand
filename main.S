@@ -285,6 +285,8 @@
         setup_get_endpoint_descriptor:
             ret
         setup_get_device_qualifier_descriptor:
+            ldi r16, MASK(STALLRQ) | MASK(EPEN)
+            sts UECONX, r16
             ret
         setup_get_other_speed_configuration_descriptor:
             ret
