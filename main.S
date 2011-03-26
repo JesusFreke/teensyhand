@@ -115,7 +115,7 @@
             call handle_setup_packet
             ;call handle_ep_int
     usb_enp_end:
-        ret
+        reti
 
     handle_setup_packet:
         lds r24, UEINTX
