@@ -383,11 +383,7 @@
             cpi r25, 0x01
             brne setup_get_string_descriptor_end
 
-            wait_for_txini r24
-
-            lds r24, UEINTX
-            cbr r24, MASK(TXINI)
-            sts UEINTX, r24
+            send_zlp r24
 
             setup_get_string_descriptor_end:
             ret

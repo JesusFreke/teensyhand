@@ -52,3 +52,9 @@ lds \tempreg, UEINTX
 andi \tempreg, MASK(TXINI)
 breq wait_for_txini_\@
 .endm
+
+.macro send_zlp tempreg
+wait_for_txini \tempreg
+cbr \tempreg, MASK(TXINI)
+sts UEINTX, r24
+.endm
