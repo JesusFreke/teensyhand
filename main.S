@@ -207,8 +207,6 @@
         sbr r18_wValue_lo, MASK(ADDEN)
         sts UDADDR, r18_wValue_lo
         
-        sbi IO_PORTD, 6
-
         setup_set_address_end:
         ret
 
@@ -277,6 +275,42 @@
 
             ret
         setup_get_configuration_descriptor:
+            .equ configuration_length, END_CONFIGURATION - CONFIGURATION
+
+            ;if more than 255 bytes are requested, round down to 255
+            ;(i.e. set the low byte to 255 - the high byte is otherwise ignored)
+            cpse r23_wLength_hi, r15_zero
+            ldi r22_wLength_lo, 0xFF
+
+            cpi r22_wLength_lo, 0
+            breq setup_get_descriptor_end
+
+            setup_get_configuration_descriptor_wait_for_txini:
+            lds r24, UEINTX
+            andi r24, MASK(TXINI)
+            breq setup_get_configuration_descriptor_wait_for_txini
+
+            ldi zl, lo8(CONFIGURATION_DESCRIPTOR)
+            ldi zh, hi8(CONFIGURATION_DESCRIPTOR)
+            cpi r22_wLength_lo, configuration_length
+
+            brlo setup_get_device_descriptor_send_loop
+            ldi r22_wLength_lo, configuration_length
+
+            ;r22 now has the number of bytes to transfer
+            ;the lesser of the descriptor size or the requested number of bytes
+            setup_get_configuration_descriptor_send_loop:
+
+            lpm r24, z+
+            sts UEDATX, r24
+            dec r22_wLength_lo
+
+            brne setup_get_configuration_descriptor_send_loop
+
+            lds r24, UEINTX
+            cbr r24, MASK(TXINI)
+            sts UEINTX, r24
+
             ret
         setup_get_string_descriptor:
             ret
@@ -340,3 +374,16 @@ DEVICE_DESCRIPTOR:
 /*iProduct*/            .byte 0x00
 /*iSerialNumber*/       .byte 0x00
 /*bNumConfigurations*/  .byte 0x01
+
+CONFIGURATION:
+CONFIGURATION_DESCRIPTOR:
+/*bLength*/             .byte 0x09
+/*bDescriptorType*/     .byte DESC_CONFIGURATION
+/*wTotalLength*/        .word END_CONFIGURATION - CONFIGURATION
+/*bNumInterfaces*/      .byte 0x00
+/*bConfigurationValue*/ .byte 0x01
+/*iConfiguration*/      .byte 0x00
+/*bmAttributes*/        .byte 0x80
+/*bMaxPower*/           .byte 0xFA ;TODO: need to measure current draw
+END_CONFIGURATION_DESCRIPTOR:
+END_CONFIGURATION:
