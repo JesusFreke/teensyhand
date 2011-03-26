@@ -90,7 +90,7 @@
         ldi r16, USB_EPTYPE_CONTROL | USB_EPDIR_OUT
         sts UECFG0X, r16
 
-        ldi r16, USB_EPSIZE_32 | USB_EPBANK_1 | MASK(ALLOC)
+        ldi r16, USB_EPSIZE_64 | USB_EPBANK_1 | MASK(ALLOC)
         sts UECFG1X, r16
 
         ;enable setup packet interrupt
@@ -366,7 +366,7 @@ DEVICE_DESCRIPTOR:
 /*bDeviceClass*/        .byte 0xFF
 /*bDeviceSubClass*/     .byte 0xFF
 /*bDeviceProtocol*/     .byte 0xFF
-/*bMaxPacketSize*/      .byte 0x20
+/*bMaxPacketSize*/      .byte 0x40
 /*idVendor*/            .word 0xFEED
 /*idProduct*/           .word 0xFACE
 /*bcdDevice*/           .word 0xF00D
