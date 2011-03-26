@@ -256,7 +256,7 @@
 
             ldi zl, lo8(DEVICE_DESCRIPTOR)
             ldi zh, hi8(DEVICE_DESCRIPTOR)
-            cp r22_wLength_lo, 0x12
+            cpi r22_wLength_lo, 0x12
 
             brlo setup_get_device_descriptor_send_loop
             ldi r22_wLength_lo, 0x12
