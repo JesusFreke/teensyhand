@@ -181,6 +181,35 @@
         ret
 
     setup_set_address:
+        cpi r16_bmRequestType, 0b00000000
+        brne setup_set_address_end
+
+        cpi r19_wValue_hi, 0
+        brne setup_set_address_end
+
+        cpi r18_wValue_lo, 0x80
+        brsh setup_set_address_end
+
+        ;store the new address, but don't enable it yet
+        sts UDADDR, r18_wValue_lo
+
+        setup_set_address_wait_for_txini:
+        lds r24, UEINTX
+        andi r24, MASK(TXINI)
+        breq setup_set_address_wait_for_txini
+
+        ;send zlp
+        lds r24, UEINTX
+        cbr r24, MASK(TXINI)
+        sts UEINTX, r24
+
+        ;enable the new address
+        sbr r18_wValue_lo, MASK(ADDEN)
+        sts UDADDR, r18_wValue_lo
+        
+        sbi IO_PORTD, 6
+
+        setup_set_address_end:
         ret
 
     setup_get_descriptor:
@@ -245,8 +274,6 @@
             lds r24, UEINTX
             cbr r24, MASK(TXINI)
             sts UEINTX, r24
-
-            sbi IO_PORTD, 6
 
             ret
         setup_get_configuration_descriptor:
