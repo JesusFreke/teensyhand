@@ -206,7 +206,7 @@
         ;enable the new address
         sbr r18_wValue_lo, MASK(ADDEN)
         sts UDADDR, r18_wValue_lo
-        
+
         setup_set_address_end:
         ret
 
@@ -313,6 +313,98 @@
 
             ret
         setup_get_string_descriptor:
+            ;if more than 255 bytes are requested, round down to 255
+            ;(i.e. set the low byte to 255 - the high byte is otherwise ignored)
+            cpse r23_wLength_hi, r15_zero
+            ldi r22_wLength_lo, 0xFF
+
+            cpi r22_wLength_lo, 0
+            breq setup_get_descriptor_end
+
+            setup_get_string_descriptor_wait_for_txini:
+            lds r24, UEINTX
+            andi r24, MASK(TXINI)
+            breq setup_get_string_descriptor_wait_for_txini
+
+            cpi r18_wValue_lo, 0x05
+            brsh setup_get_string_descriptor_end
+
+            #define r25_with_zlp r25
+            ldi r25_with_zlp, 0x00
+
+            ;switch based on string index
+            ldi zl, lo8(pm(string_descriptor_table))
+            ldi zh, hi8(pm(string_descriptor_table))
+            lsl r18_wValue_lo
+            lsl r18_wValue_lo
+            add zl, r18_wValue_lo
+            adc zh, r15_zero
+            ijmp
+
+            string_descriptor_table:
+                ;string 0 - lang id table
+                ldi zl, lo8(STRING_0)
+                ldi zh, hi8(STRING_0)
+                ldi r24, lo8(STRING_0_END - STRING_0)
+                rjmp send_string_descriptor
+                ;string 1 - manufacturer
+                ldi zl, lo8(STRING_1)
+                ldi zh, hi8(STRING_1)
+                ldi r24, STRING_1_END - STRING_1
+                rjmp send_string_descriptor
+                ;string 2 - product
+                ldi zl, lo8(STRING_2)
+                ldi zh, hi8(STRING_2)
+                ldi r24, STRING_2_END - STRING_2
+                rjmp send_string_descriptor
+                ;string 3 - serial number
+                ldi zl, lo8(STRING_3)
+                ldi zh, hi8(STRING_3)
+                ldi r24, STRING_3_END - STRING_3
+                rjmp send_string_descriptor_with_zlp
+                ;string 4 - configuration name
+                ldi zl, lo8(STRING_4)
+                ldi zh, hi8(STRING_4)
+                ldi r24, STRING_4_END - STRING_4
+                rjmp send_string_descriptor_with_zlp
+
+            send_string_descriptor_with_zlp:
+            ldi r25, 0x01
+
+            send_string_descriptor:
+
+            cp r22_wLength_lo, r24
+
+            brlo setup_get_string_descriptor_send_loop
+            mov r22_wLength_lo, r24
+
+            ;r22 now has the number of bytes to transfer
+            ;the lesser of the descriptor size or the requested number of bytes
+            setup_get_string_descriptor_send_loop:
+
+            lpm r24, z+
+            sts UEDATX, r24
+            dec r22_wLength_lo
+
+            brne setup_get_string_descriptor_send_loop
+
+            lds r24, UEINTX
+            cbr r24, MASK(TXINI)
+            sts UEINTX, r24
+
+            cpi r25, 0x01
+            brne setup_get_string_descriptor_end
+
+            setup_get_string_descriptor_wait_for_txini2:
+            lds r24, UEINTX
+            andi r24, MASK(TXINI)
+            breq setup_get_string_descriptor_wait_for_txini2
+
+            lds r24, UEINTX
+            cbr r24, MASK(TXINI)
+            sts UEINTX, r24
+
+            setup_get_string_descriptor_end:
             ret
         setup_get_interface_descriptor:
             ret
@@ -370,9 +462,9 @@ DEVICE_DESCRIPTOR:
 /*idVendor*/            .word 0xFEED
 /*idProduct*/           .word 0xFACE
 /*bcdDevice*/           .word 0xF00D
-/*iManufacturer*/       .byte 0x00
-/*iProduct*/            .byte 0x00
-/*iSerialNumber*/       .byte 0x00
+/*iManufacturer*/       .byte 0x01
+/*iProduct*/            .byte 0x02
+/*iSerialNumber*/       .byte 0x03
 /*bNumConfigurations*/  .byte 0x01
 
 CONFIGURATION:
@@ -382,8 +474,47 @@ CONFIGURATION_DESCRIPTOR:
 /*wTotalLength*/        .word END_CONFIGURATION - CONFIGURATION
 /*bNumInterfaces*/      .byte 0x00
 /*bConfigurationValue*/ .byte 0x01
-/*iConfiguration*/      .byte 0x00
+/*iConfiguration*/      .byte 0x04
 /*bmAttributes*/        .byte 0x80
 /*bMaxPower*/           .byte 0xFA ;TODO: need to measure current draw
 END_CONFIGURATION_DESCRIPTOR:
 END_CONFIGURATION:
+
+;Supported Languages
+STRING_0:
+.byte 0x04
+.byte DESC_STRING
+.word 0x0409
+STRING_0_END:
+
+;Manufacturer
+STRING_1:
+.byte 0x16
+.byte DESC_STRING
+.byte 'J',0,'e',0,'s',0,'u',0,'s',0,'F',0,'r',0,'e',0,'k',0,'e',0
+STRING_1_END:
+
+;Product
+STRING_2:
+.byte 0x12
+.byte DESC_STRING
+.byte 'D',0,'a',0,'t',0,'a',0,'H',0,'a',0,'n',0,'d',0
+STRING_2_END:
+
+;Serial Number
+STRING_3:
+.byte 0x40
+.byte DESC_STRING
+.byte '3',0,'.',0,'1',0,'4',0,'1',0,'5',0,'9',0,'2',0,'6',0,'5',0,'3',0,'5',0
+.byte '8',0,'9',0,'7',0,'9',0,'3',0,'2',0,'3',0,'8',0,'4',0,'6',0,'2',0,'6',0
+.byte '4',0,'3',0,'3',0,'8',0,'3',0,'2',0,'7',0
+STRING_3_END:
+
+;Configuration Name
+STRING_4:
+.byte 0x40
+.byte DESC_STRING
+.byte 'T',0,'h',0,'e',0,' ',0,'C',0,'o',0,'n',0,'f',0,'i',0,'g',0,'u',0,'r',0
+.byte 'a',0,'t',0,'i',0,'o',0,'n',0,' ',0,'o',0,'f',0,' ',0,'D',0,'O',0,'O',0
+.byte 'O',0,'O',0,'O',0,'O',0,'O',0,'O',0,'M',0
+STRING_4_END:
