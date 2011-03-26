@@ -44,3 +44,11 @@
 #define STATE_DEFAULT
 #define STATE_ADDRESS
 #define STATE_CONFIGURED
+
+
+.macro wait_for_txini tempreg
+wait_for_txini_\@:
+lds \tempreg, UEINTX
+andi \tempreg, MASK(TXINI)
+breq wait_for_txini_\@
+.endm

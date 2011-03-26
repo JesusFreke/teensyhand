@@ -193,10 +193,7 @@
         ;store the new address, but don't enable it yet
         sts UDADDR, r18_wValue_lo
 
-        setup_set_address_wait_for_txini:
-        lds r24, UEINTX
-        andi r24, MASK(TXINI)
-        breq setup_set_address_wait_for_txini
+        wait_for_txini r24
 
         ;send zlp
         lds r24, UEINTX
@@ -247,10 +244,7 @@
             cpi r22_wLength_lo, 0
             breq setup_get_descriptor_end
 
-            setup_get_device_descriptor_wait_for_txini:
-            lds r24, UEINTX
-            andi r24, MASK(TXINI)
-            breq setup_get_device_descriptor_wait_for_txini
+            wait_for_txini r24
 
             ldi zl, lo8(DEVICE_DESCRIPTOR)
             ldi zh, hi8(DEVICE_DESCRIPTOR)
@@ -285,10 +279,7 @@
             cpi r22_wLength_lo, 0
             breq setup_get_descriptor_end
 
-            setup_get_configuration_descriptor_wait_for_txini:
-            lds r24, UEINTX
-            andi r24, MASK(TXINI)
-            breq setup_get_configuration_descriptor_wait_for_txini
+            wait_for_txini r24
 
             ldi zl, lo8(CONFIGURATION_DESCRIPTOR)
             ldi zh, hi8(CONFIGURATION_DESCRIPTOR)
@@ -321,10 +312,7 @@
             cpi r22_wLength_lo, 0
             breq setup_get_descriptor_end
 
-            setup_get_string_descriptor_wait_for_txini:
-            lds r24, UEINTX
-            andi r24, MASK(TXINI)
-            breq setup_get_string_descriptor_wait_for_txini
+            wait_for_txini r24
 
             cpi r18_wValue_lo, 0x05
             brsh setup_get_string_descriptor_end
@@ -395,10 +383,7 @@
             cpi r25, 0x01
             brne setup_get_string_descriptor_end
 
-            setup_get_string_descriptor_wait_for_txini2:
-            lds r24, UEINTX
-            andi r24, MASK(TXINI)
-            breq setup_get_string_descriptor_wait_for_txini2
+            wait_for_txini r24
 
             lds r24, UEINTX
             cbr r24, MASK(TXINI)
@@ -436,7 +421,6 @@
 
     setup_synch_frame:
         ret
-
 
     .global t1_int
     t1_int:
