@@ -330,31 +330,25 @@
             ijmp
 
             string_descriptor_table:
+                .macro string_descriptor_case index send_data
+                    ldi zl, lo8(STRING_\index)
+                    ldi zh, hi8(STRING_\index)
+                    ldi r24, STRING_\index\()_END - STRING_\index
+                    rjmp \send_data
+                .endm
+
                 ;string 0 - lang id table
-                ldi zl, lo8(STRING_0)
-                ldi zh, hi8(STRING_0)
-                ldi r24, STRING_0_END - STRING_0
-                rjmp send_string_descriptor
+                string_descriptor_case 0, send_string_descriptor
                 ;string 1 - manufacturer
-                ldi zl, lo8(STRING_1)
-                ldi zh, hi8(STRING_1)
-                ldi r24, STRING_1_END - STRING_1
-                rjmp send_string_descriptor
+                string_descriptor_case 1, send_string_descriptor
                 ;string 2 - product
-                ldi zl, lo8(STRING_2)
-                ldi zh, hi8(STRING_2)
-                ldi r24, STRING_2_END - STRING_2
-                rjmp send_string_descriptor
+                string_descriptor_case 2, send_string_descriptor
                 ;string 3 - serial number
-                ldi zl, lo8(STRING_3)
-                ldi zh, hi8(STRING_3)
-                ldi r24, STRING_3_END - STRING_3
-                rjmp send_string_descriptor_with_zlp
+                string_descriptor_case 3, send_string_descriptor_with_zlp
                 ;string 4 - configuration name
-                ldi zl, lo8(STRING_4)
-                ldi zh, hi8(STRING_4)
-                ldi r24, STRING_4_END - STRING_4
-                rjmp send_string_descriptor_with_zlp
+                string_descriptor_case 4, send_string_descriptor_with_zlp
+
+                .purgem string_descriptor_case
 
             send_string_descriptor_with_zlp:
             ldi r25, 0x01
