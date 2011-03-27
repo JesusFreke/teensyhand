@@ -193,7 +193,7 @@
         ;store the new address, but don't enable it yet
         sts UDADDR, r18_wValue_lo
 
-        wait_for_txini r24
+        usb_wait_for_txini r24
 
         ;send zlp
         lds r24, UEINTX
@@ -244,7 +244,7 @@
             cpi r22_wLength_lo, 0
             breq setup_get_descriptor_end
 
-            wait_for_txini r24
+            usb_wait_for_txini r24
 
             ldi zl, lo8(DEVICE_DESCRIPTOR)
             ldi zh, hi8(DEVICE_DESCRIPTOR)
@@ -279,7 +279,7 @@
             cpi r22_wLength_lo, 0
             breq setup_get_descriptor_end
 
-            wait_for_txini r24
+            usb_wait_for_txini r24
 
             ldi zl, lo8(CONFIGURATION_DESCRIPTOR)
             ldi zh, hi8(CONFIGURATION_DESCRIPTOR)
@@ -312,7 +312,7 @@
             cpi r22_wLength_lo, 0
             breq setup_get_descriptor_end
 
-            wait_for_txini r24
+            usb_wait_for_txini r24
 
             cpi r18_wValue_lo, 0x05
             brsh setup_get_string_descriptor_end
@@ -377,7 +377,7 @@
             cpi r25, 0x01
             brne setup_get_string_descriptor_end
 
-            send_zlp r24
+            usb_send_queued_data r24
 
             setup_get_string_descriptor_end:
             ret

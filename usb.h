@@ -46,15 +46,15 @@
 #define STATE_CONFIGURED
 
 
-.macro wait_for_txini tempreg
-wait_for_txini_\@:
-lds \tempreg, UEINTX
-andi \tempreg, MASK(TXINI)
-breq wait_for_txini_\@
+.macro usb_wait_for_txini tempreg
+    usb_wait_for_txini_\@:
+    lds \tempreg, UEINTX
+    andi \tempreg, MASK(TXINI)
+    breq usb_wait_for_txini_\@
 .endm
 
-.macro send_zlp tempreg
-wait_for_txini \tempreg
-cbr \tempreg, MASK(TXINI)
-sts UEINTX, r24
+.macro usb_send_queued_data tempreg
+    usb_wait_for_txini \tempreg
+    cbr \tempreg, MASK(TXINI)
+    sts UEINTX, r24
 .endm
