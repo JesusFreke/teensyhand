@@ -48,3 +48,12 @@
 
 #define USB_EPBANK_1        0b00 << 2
 #define USB_EPBANK_2        0b01 << 2
+
+#define BIT_C 0
+#define BIT_Z 1
+#define BIT_N 2
+#define BIT_V 3
+#define BIT_S 4
+#define BIT_H 5
+#define BIT_T 6
+#define BIT_I 7

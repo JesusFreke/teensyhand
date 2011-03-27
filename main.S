@@ -241,33 +241,21 @@
             cpse r23_wLength_hi, r15_zero
             ldi r22_wLength_lo, 0xFF
 
+            ;TODO: do we need to send a zlp if 0 bytes are requested?
             cpi r22_wLength_lo, 0
             breq setup_get_descriptor_end
 
-            usb_wait_for_txini r24
-
             ldi zl, lo8(DEVICE_DESCRIPTOR)
             ldi zh, hi8(DEVICE_DESCRIPTOR)
+            
+            ;check if the requested number of bytes is less than the descriptor length
             cpi r22_wLength_lo, 0x12
-
-            brlo setup_get_device_descriptor_send_loop
+            brlo setup_get_device_descriptor_send_data
             ldi r22_wLength_lo, 0x12
+            
+            setup_get_device_descriptor_send_data:
+            rjmp usb_send_data_short_64 ;tail call
 
-            ;r22 now has the number of bytes to transfer
-            ;the lesser of the descriptor size or the requested number of bytes
-            setup_get_device_descriptor_send_loop:
-
-            lpm r24, z+
-            sts UEDATX, r24
-            dec r22_wLength_lo
-
-            brne setup_get_device_descriptor_send_loop
-
-            lds r24, UEINTX
-            cbr r24, MASK(TXINI)
-            sts UEINTX, r24
-
-            ret
         setup_get_configuration_descriptor:
             .equ configuration_length, END_CONFIGURATION - CONFIGURATION
 
@@ -276,49 +264,33 @@
             cpse r23_wLength_hi, r15_zero
             ldi r22_wLength_lo, 0xFF
 
+            ;TODO: do we need to send a zlp if 0 bytes are requested?
             cpi r22_wLength_lo, 0
             breq setup_get_descriptor_end
 
-            usb_wait_for_txini r24
-
             ldi zl, lo8(CONFIGURATION_DESCRIPTOR)
             ldi zh, hi8(CONFIGURATION_DESCRIPTOR)
+            
+            ;check if the requested number of bytes is less than the total amount of data we have to send
             cpi r22_wLength_lo, configuration_length
-
-            brlo setup_get_device_descriptor_send_loop
+            brlo setup_get_configuration_descriptor_send_data
             ldi r22_wLength_lo, configuration_length
 
-            ;r22 now has the number of bytes to transfer
-            ;the lesser of the descriptor size or the requested number of bytes
-            setup_get_configuration_descriptor_send_loop:
+            setup_get_configuration_descriptor_send_data:
+            rjmp usb_send_data_short_64 ;tail call
 
-            lpm r24, z+
-            sts UEDATX, r24
-            dec r22_wLength_lo
-
-            brne setup_get_configuration_descriptor_send_loop
-
-            lds r24, UEINTX
-            cbr r24, MASK(TXINI)
-            sts UEINTX, r24
-
-            ret
         setup_get_string_descriptor:
             ;if more than 255 bytes are requested, round down to 255
             ;(i.e. set the low byte to 255 - the high byte is otherwise ignored)
             cpse r23_wLength_hi, r15_zero
             ldi r22_wLength_lo, 0xFF
 
+            ;TODO: do we need to send a zlp if 0 bytes are requested?
             cpi r22_wLength_lo, 0
             breq setup_get_descriptor_end
 
-            usb_wait_for_txini r24
-
             cpi r18_wValue_lo, 0x05
-            brsh setup_get_string_descriptor_end
-
-            #define r25_with_zlp r25
-            ldi r25_with_zlp, 0x00
+            brsh setup_get_descriptor_end
 
             ;switch based on string index
             ldi zl, lo8(pm(string_descriptor_table))
@@ -334,53 +306,31 @@
                     ldi zl, lo8(STRING_\index)
                     ldi zh, hi8(STRING_\index)
                     ldi r24, STRING_\index\()_END - STRING_\index
-                    rjmp \send_data
+                    rjmp string_descriptor_table_end
                 .endm
 
                 ;string 0 - lang id table
-                string_descriptor_case 0, send_string_descriptor
+                string_descriptor_case 0
                 ;string 1 - manufacturer
-                string_descriptor_case 1, send_string_descriptor
+                string_descriptor_case 1
                 ;string 2 - product
-                string_descriptor_case 2, send_string_descriptor
+                string_descriptor_case 2
                 ;string 3 - serial number
-                string_descriptor_case 3, send_string_descriptor_with_zlp
+                string_descriptor_case 3
                 ;string 4 - configuration name
-                string_descriptor_case 4, send_string_descriptor_with_zlp
+                string_descriptor_case 4
 
                 .purgem string_descriptor_case
-
-            send_string_descriptor_with_zlp:
-            ldi r25, 0x01
-
-            send_string_descriptor:
-
+            string_descriptor_table_end:
+            
+            ;check if the requested number of bytes is less than the descriptor length
             cp r22_wLength_lo, r24
-
-            brlo setup_get_string_descriptor_send_loop
+            brlo setup_get_string_descriptor_send_data
             mov r22_wLength_lo, r24
-
-            ;r22 now has the number of bytes to transfer
-            ;the lesser of the descriptor size or the requested number of bytes
-            setup_get_string_descriptor_send_loop:
-
-            lpm r24, z+
-            sts UEDATX, r24
-            dec r22_wLength_lo
-
-            brne setup_get_string_descriptor_send_loop
-
-            lds r24, UEINTX
-            cbr r24, MASK(TXINI)
-            sts UEINTX, r24
-
-            cpi r25, 0x01
-            brne setup_get_string_descriptor_end
-
-            usb_send_queued_data r24
-
-            setup_get_string_descriptor_end:
-            ret
+            
+            setup_get_string_descriptor_send_data:
+            rjmp usb_send_data_short_64 ;tail call
+            
         setup_get_interface_descriptor:
             ret
         setup_get_endpoint_descriptor:
@@ -411,6 +361,45 @@
 
     setup_synch_frame:
         ret
+
+    ;Sends up to 255 bytes to the currently selected usb endpoint, which must
+    ;be configured for a packet length of 64 bytes
+    ;zh:zl should point to the data to send
+    ;r22 should contain the requested amount of data to send
+    ;r22, r23 and r24 will be clobbered on exit
+    usb_send_data_short_64:
+        ;load the size of the next packet into r23
+        ldi r23, 0x40
+        cp r23, r22
+        brlo usb_send_data_short_64_1
+        ;if r22 <= r23
+            mov r23, r22        
+        usb_send_data_short_64_1:
+
+        ;queue the data for the next packet
+        usb_send_data_short_64_loop:
+            lpm r24, z+
+            sts UEDATX, r24
+            dec r23
+        brne usb_send_data_short_64_loop
+
+        ;send the data
+        usb_send_queued_data r24
+        
+        subi r22, 0x40
+        
+        ;if z is set, we are done sending data, and need to send a zlp
+        ;if c is set, we are done sending data, and don't need to send a zlp
+        ;if neither of the above, we have more data to send
+        
+        brbs BIT_C, usb_send_data_short_64_end
+        brbc BIT_Z, usb_send_data_short_64
+        
+        ;send a zlp
+        usb_send_queued_data r24
+        
+        usb_send_data_short_64_end:
+    ret
 
     .global t1_int
     t1_int:
