@@ -112,6 +112,10 @@
             ldi r16, 0
             sts UENUM, r16
 
+            #define r10_max_packet_len r10
+            ldi r16, 0x40
+            mov r10_max_packet_len, r16
+
             call handle_setup_packet
             ;call handle_ep_int
     usb_enp_end:
@@ -254,7 +258,7 @@
             ldi r22_wLength_lo, 0x12
             
             setup_get_device_descriptor_send_data:
-            rjmp usb_send_data_short_64 ;tail call
+            rjmp usb_send_data_short ;tail call
 
         setup_get_configuration_descriptor:
             .equ configuration_length, END_CONFIGURATION - CONFIGURATION
@@ -277,7 +281,7 @@
             ldi r22_wLength_lo, configuration_length
 
             setup_get_configuration_descriptor_send_data:
-            rjmp usb_send_data_short_64 ;tail call
+            rjmp usb_send_data_short ;tail call
 
         setup_get_string_descriptor:
             ;if more than 255 bytes are requested, round down to 255
@@ -329,7 +333,7 @@
             mov r22_wLength_lo, r24
             
             setup_get_string_descriptor_send_data:
-            rjmp usb_send_data_short_64 ;tail call
+            rjmp usb_send_data_short ;tail call
             
         setup_get_interface_descriptor:
             ret
@@ -362,43 +366,50 @@
     setup_synch_frame:
         ret
 
-    ;Sends up to 255 bytes to the currently selected usb endpoint, which must
-    ;be configured for a packet length of 64 bytes
+    ;Sends up to 255 bytes to the currently selected usb endpoint
     ;zh:zl should point to the data to send
-    ;r22 should contain the requested amount of data to send
+    ;r22 should contain the amount of data to send
+    ;r10 should contain the maximum packet length for this endpoint
     ;r22, r23 and r24 will be clobbered on exit
-    usb_send_data_short_64:
+    usb_send_data_short:
+    #define r22_data_len r22
+    #define r23_current_packet_len r23
+    #define r24_temp_reg r24
+
         ;load the size of the next packet into r23
-        ldi r23, 0x40
-        cp r23, r22
-        brlo usb_send_data_short_64_1
-        ;if r22 <= r23
-            mov r23, r22        
-        usb_send_data_short_64_1:
+        mov r23_current_packet_len, r10_max_packet_len
+        cp r23_current_packet_len, r22_data_len
+        brlo usb_send_data_short_1
+        ;if data_len <= current_packet_len
+            mov r23_current_packet_len, r22_data_len
+        usb_send_data_short_1:
 
         ;queue the data for the next packet
-        usb_send_data_short_64_loop:
-            lpm r24, z+
-            sts UEDATX, r24
+        usb_send_data_short_loop:
+            lpm r24_temp_reg, z+
+            sts UEDATX, r24_temp_reg
             dec r23
-        brne usb_send_data_short_64_loop
+        brne usb_send_data_short_loop
 
         ;send the data
-        usb_send_queued_data r24
+        usb_send_queued_data r24_temp_reg
         
-        subi r22, 0x40
+        sub r22_data_len, r10_max_packet_len
         
         ;if z is set, we are done sending data, and need to send a zlp
         ;if c is set, we are done sending data, and don't need to send a zlp
         ;if neither of the above, we have more data to send
         
-        brbs BIT_C, usb_send_data_short_64_end
-        brbc BIT_Z, usb_send_data_short_64
+        brbs BIT_C, usb_send_data_short_end
+        brbc BIT_Z, usb_send_data_short
         
         ;send a zlp
-        usb_send_queued_data r24
+        usb_send_queued_data r24_temp_reg
         
-        usb_send_data_short_64_end:
+        usb_send_data_short_end:
+    #undef r22_data_len
+    #undef r23_current_packet_len
+    #undef r24_temp_reg
     ret
 
     .global t1_int
