@@ -61,7 +61,7 @@ STRING_0_END:
 
 string_descriptor 1, "JesusFreke"
 string_descriptor 2, "DataHand"
-string_descriptor 3, "3.14159265358979323846264338327"
+string_descriptor 3, "3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938"
 string_descriptor 4, "The Configuration of DOOOOOOOOM"
 
 ;we have to be aligned, for any code that follows
