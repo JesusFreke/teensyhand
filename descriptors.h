@@ -27,6 +27,31 @@ CONFIGURATION_DESCRIPTOR:
 END_CONFIGURATION_DESCRIPTOR:
 END_CONFIGURATION:
 
+.macro string_descriptor index, string
+    ;calculate the length of the string
+    .set length, 0
+    .irpc ch, \string
+        .set length, length+1
+    .endr
+
+    ;output the string descriptor, as 16-bit UNICODE
+    STRING_\index:
+    .byte (length*2)+2
+    .byte DESC_STRING
+
+    .irpc n,\string
+        ;ughughugh. using the symbol name n is an ugly ugly hack to
+        ;avoid a bogus "warning, unknown escape" warning. \n actually
+        ;expands into the current character from the given string, it
+        ;is NOT a newline character
+        .asciz "\n"
+    .endr
+    STRING_\index\()_END:
+
+    ;make a note of the length of the string, for use elsewhere
+    .set STRING_\index\()_LEN, (length*2)+2
+.endm
+
 ;Supported Languages
 STRING_0:
 .byte 0x04
@@ -34,37 +59,10 @@ STRING_0:
 .word 0x0409
 STRING_0_END:
 
-;Manufacturer
-STRING_1:
-.byte 0x16
-.byte DESC_STRING
-.byte 'J',0,'e',0,'s',0,'u',0,'s',0,'F',0,'r',0,'e',0,'k',0,'e',0
-STRING_1_END:
-
-;Product
-STRING_2:
-.byte 0x12
-.byte DESC_STRING
-.byte 'D',0,'a',0,'t',0,'a',0,'H',0,'a',0,'n',0,'d',0
-STRING_2_END:
-
-;Serial Number
-STRING_3:
-.byte 0x40
-.byte DESC_STRING
-.byte '3',0,'.',0,'1',0,'4',0,'1',0,'5',0,'9',0,'2',0,'6',0,'5',0,'3',0,'5',0
-.byte '8',0,'9',0,'7',0,'9',0,'3',0,'2',0,'3',0,'8',0,'4',0,'6',0,'2',0,'6',0
-.byte '4',0,'3',0,'3',0,'8',0,'3',0,'2',0,'7',0
-STRING_3_END:
-
-;Configuration Name
-STRING_4:
-.byte 0x40
-.byte DESC_STRING
-.byte 'T',0,'h',0,'e',0,' ',0,'C',0,'o',0,'n',0,'f',0,'i',0,'g',0,'u',0,'r',0
-.byte 'a',0,'t',0,'i',0,'o',0,'n',0,' ',0,'o',0,'f',0,' ',0,'D',0,'O',0,'O',0
-.byte 'O',0,'O',0,'O',0,'O',0,'O',0,'O',0,'M',0
-STRING_4_END:
+string_descriptor 1, "JesusFreke"
+string_descriptor 2, "DataHand"
+string_descriptor 3, "3.14159265358979323846264338327"
+string_descriptor 4, "The Configuration of DOOOOOOOOM"
 
 ;we have to be aligned, for any code that follows
 .align 2
