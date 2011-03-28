@@ -54,7 +54,6 @@
 .endm
 
 .macro usb_send_queued_data tempreg
-    usb_wait_for_txini \tempreg
     cbr \tempreg, MASK(TXINI)
     sts UEINTX, r24
 .endm

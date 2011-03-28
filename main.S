@@ -384,6 +384,9 @@
             mov r23_current_packet_len, r22_data_len
         usb_send_data_short_1:
 
+        ;wait for txini to become set before queueing any data
+        usb_wait_for_txini r24
+
         ;queue the data for the next packet
         usb_send_data_short_loop:
             lpm r24_temp_reg, z+
@@ -404,6 +407,7 @@
         brbc BIT_Z, usb_send_data_short
         
         ;send a zlp
+        usb_wait_for_txini r24
         usb_send_queued_data r24_temp_reg
         
         usb_send_data_short_end:
