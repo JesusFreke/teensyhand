@@ -197,12 +197,7 @@
         ;store the new address, but don't enable it yet
         sts UDADDR, r18_wValue_lo
 
-        usb_wait_for_txini r24
-
-        ;send zlp
-        lds r24, UEINTX
-        cbr r24, MASK(TXINI)
-        sts UEINTX, r24
+        usb_send_zlp r24
 
         ;enable the new address
         sbr r18_wValue_lo, MASK(ADDEN)
@@ -407,8 +402,7 @@
         brbc BIT_Z, usb_send_data_short
         
         ;send a zlp
-        usb_wait_for_txini r24
-        usb_send_queued_data r24_temp_reg
+        usb_send_zlp r24
         
         usb_send_data_short_end:
     #undef r22_data_len
