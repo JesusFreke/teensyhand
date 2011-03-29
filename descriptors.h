@@ -56,12 +56,16 @@ END_CONFIGURATION:
 STRING_0:
 .byte 0x04
 .byte DESC_STRING
-.word 0x0409
+.word 0x0409 ;English (US)
 STRING_0_END:
 
+;Manufacturer
 string_descriptor 1, "JesusFreke"
+;Product
 string_descriptor 2, "DataHand"
+;Serial Number
 string_descriptor 3, "3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938"
+;Configuration Name
 string_descriptor 4, "The Configuration of DOOOOOOOOM"
 
 ;we have to be aligned, for any code that follows
