@@ -258,7 +258,7 @@
             rjmp usb_send_data_short ;tail call
 
         setup_get_configuration_descriptor:
-            .equ configuration_length, END_CONFIGURATION - CONFIGURATION
+            .equ configuration_length, CONFIGURATION_END - CONFIGURATION
 
             ;if more than 255 bytes are requested, round down to 255
             ;(i.e. set the low byte to 255 - the high byte is otherwise ignored)

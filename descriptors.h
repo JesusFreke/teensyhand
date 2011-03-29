@@ -18,14 +18,14 @@ CONFIGURATION:
 CONFIGURATION_DESCRIPTOR:
 /*bLength*/             .byte 0x09
 /*bDescriptorType*/     .byte DESC_CONFIGURATION
-/*wTotalLength*/        .word END_CONFIGURATION - CONFIGURATION
+/*wTotalLength*/        .word CONFIGURATION_END - CONFIGURATION
 /*bNumInterfaces*/      .byte 0x00
 /*bConfigurationValue*/ .byte 0x01
 /*iConfiguration*/      .byte 0x04
 /*bmAttributes*/        .byte 0x80
 /*bMaxPower*/           .byte 0xFA ;TODO: need to measure current draw
-END_CONFIGURATION_DESCRIPTOR:
-END_CONFIGURATION:
+CONFIGURATION_DESCRIPTOR_END:
+CONFIGURATION_END:
 
 .macro string_descriptor index, string
     ;calculate the length of the string
