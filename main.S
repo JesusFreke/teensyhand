@@ -6,6 +6,8 @@
 #define zl ZL
 #define zh ZH
 
+.lcomm current_configuration, 1
+
 .text
     .global main
     main:
@@ -350,6 +352,9 @@
         ret
 
     setup_set_configuration:
+        sbi IO_PORTD, 6
+        sts current_configuration, r18_wValue_lo
+        usb_send_zlp r19
         ret
 
     setup_get_interface:
