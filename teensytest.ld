@@ -6,4 +6,7 @@ SECTIONS {
 
     *(.text)
   }
+  .bss 0x100 : {
+    *(.bss)
+  }
 }
