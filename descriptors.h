@@ -2,9 +2,9 @@ DEVICE_DESCRIPTOR:
 /*bLength*/             .byte 0x12
 /*bDescriptorType*/     .byte DESC_DEVICE
 /*bcdUSB*/              .word 0x0200
-/*bDeviceClass*/        .byte 0xFF
-/*bDeviceSubClass*/     .byte 0xFF
-/*bDeviceProtocol*/     .byte 0xFF
+/*bDeviceClass*/        .byte 0x00
+/*bDeviceSubClass*/     .byte 0x00
+/*bDeviceProtocol*/     .byte 0x00
 /*bMaxPacketSize*/      .byte 0x40
 /*idVendor*/            .word 0xFEED
 /*idProduct*/           .word 0xFACE
