@@ -354,8 +354,27 @@
         ret
 
     setup_set_configuration:
-        sbi IO_PORTD, 6
         sts current_configuration, r18_wValue_lo
+
+        ;select ep1
+        ldi r16, 1
+        sts UENUM, r16
+
+        ;enable ep1
+        ldi r16, MASK(EPEN)
+        sts UECONX, r16
+
+        ;configure ep1
+        ldi r16, USB_EPTYPE_INT | USB_EPDIR_IN
+        sts UECFG0X, r16
+
+        ldi r16, USB_EPSIZE_32 | USB_EPBANK_1 | MASK(ALLOC)
+        sts UECFG1X, r16
+
+        ;re-select ep0
+        ldi r16, 0
+        sts UENUM, r16
+
         usb_send_zlp r19
         ret
 
