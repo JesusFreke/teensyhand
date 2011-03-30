@@ -79,6 +79,7 @@
 
         reti
 
+    ;this interrupt occurs when the usb controller has finished reseting, and is ready to be used
     eor_int:
         ;select ep0
         ldi r16, 0
