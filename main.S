@@ -290,7 +290,7 @@
             cpi r22_wLength_lo, 0
             breq setup_get_descriptor_end
 
-            cpi r18_wValue_lo, 0x05
+            cpi r18_wValue_lo, 0x06
             brsh setup_get_descriptor_end
 
             ;switch based on string index
@@ -320,6 +320,8 @@
                 string_descriptor_case 3
                 ;string 4 - configuration name
                 string_descriptor_case 4
+                ;string 5 - interface name
+                string_descriptor_case 5
 
                 .purgem string_descriptor_case
             string_descriptor_table_end:
