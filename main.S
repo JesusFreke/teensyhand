@@ -7,6 +7,7 @@
 #define zh ZH
 
 .lcomm current_configuration, 1
+.lcomm hid_idle_period, 1
 
 .text
     .global main
@@ -18,6 +19,10 @@
         sts CLKPR, r16
 
         sbi IO_DDRD, 6
+
+        ;initialize hid idle period to 500ms (125*4ms)
+        ldi r16, 0x7d
+        sts hid_idle_period, r16
 
         ;enable usb pad regulator and select usb device mode
         ldi r16, MASK(UIMOD) | MASK(UVREGE)
@@ -155,6 +160,14 @@
         cbr r24, MASK(RXSTPI)
         sts UEINTX, r24
 
+        ;check if it is a class request
+        sbrc r16_bmRequestType, 5
+        rjmp handle_hid_packet
+
+        ;check if it is a vendor request
+        sbrc r16_bmRequestType, 6
+        rjmp setup_unknown
+
         cpi r17_bRequest, 0x0D
         brsh setup_unknown
 
@@ -180,6 +193,51 @@
         /*0x0A*/ rjmp setup_get_interface
         /*0x0B*/ rjmp setup_set_interface
         /*0x0C*/ rjmp setup_synch_frame
+
+    handle_hid_packet:
+        cpi r17_bRequest, 0x0c
+        brsh setup_unknown
+
+        ldi zl, lo8(pm(hid_request_table))
+        ldi zh, hi8(pm(hid_request_table))
+        add zl, r17_bRequest
+        clr r15_zero
+        adc zh, r15_zero
+        ijmp
+
+        hid_request_table:
+        /*0x00*/ rjmp setup_unknown
+        /*0x01*/ rjmp hid_get_report
+        /*0x02*/ rjmp hid_get_idle
+        /*0x03*/ rjmp hid_get_protocol
+        /*0x04*/ rjmp setup_unknown
+        /*0x05*/ rjmp setup_unknown
+        /*0x06*/ rjmp setup_unknown
+        /*0x07*/ rjmp setup_unknown
+        /*0x08*/ rjmp setup_unknown
+        /*0x09*/ rjmp hid_set_report
+        /*0x0a*/ rjmp hid_set_idle
+        /*0x0b*/ rjmp hid_set_protocol
+
+    hid_get_report:
+        ret
+
+    hid_get_idle:
+        ret
+
+    hid_get_protocol:
+        ret
+
+    hid_set_report:
+        ret
+
+    hid_set_idle:
+        sts hid_idle_period, r19_wValue_hi
+        usb_send_zlp r16
+        ret
+
+    hid_set_protocol:
+        ret
 
     setup_unknown:
         ret
