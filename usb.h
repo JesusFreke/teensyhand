@@ -165,8 +165,8 @@ Only for use with isochronous endpoints*/
 .macro usb_wait_for_txini tempreg
     usb_wait_for_txini_\@:
     lds \tempreg, UEINTX
-    andi \tempreg, MASK(TXINI)
-    breq usb_wait_for_txini_\@
+    sbrs \tempreg, TXINI
+    rjmp usb_wait_for_txini_\@
 .endm
 
 .macro usb_send_queued_data tempreg
