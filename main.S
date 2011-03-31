@@ -208,6 +208,8 @@
 
         usb_send_zlp r24
 
+        usb_wait_for_txini r24
+
         ;enable the new address
         sbr r18_wValue_lo, MASK(ADDEN)
         sts UDADDR, r18_wValue_lo
