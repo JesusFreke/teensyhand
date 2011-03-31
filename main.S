@@ -11,6 +11,12 @@
 .text
     .global main
     main:
+        ldi r16, 0x80
+        sts CLKPR, r16
+
+        clr r16
+        sts CLKPR, r16
+
         sbi IO_DDRD, 6
 
         ;enable usb pad regulator and select usb device mode
