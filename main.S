@@ -315,12 +315,12 @@
 
             ldi zl, lo8(DEVICE_DESCRIPTOR)
             ldi zh, hi8(DEVICE_DESCRIPTOR)
-            
+
             ;check if the requested number of bytes is less than the descriptor length
             cpi r22_wLength_lo, 0x12
             brlo setup_get_device_descriptor_send_data
             ldi r22_wLength_lo, 0x12
-            
+
             setup_get_device_descriptor_send_data:
             rjmp usb_send_data_short ;tail call
 
@@ -338,7 +338,7 @@
 
             ldi zl, lo8(CONFIGURATION_DESCRIPTOR)
             ldi zh, hi8(CONFIGURATION_DESCRIPTOR)
-            
+
             ;check if the requested number of bytes is less than the total amount of data we have to send
             cpi r22_wLength_lo, configuration_length
             brlo setup_get_configuration_descriptor_send_data
@@ -392,15 +392,15 @@
 
                 .purgem string_descriptor_case
             string_descriptor_table_end:
-            
+
             ;check if the requested number of bytes is less than the descriptor length
             cp r22_wLength_lo, r24
             brlo setup_get_string_descriptor_send_data
             mov r22_wLength_lo, r24
-            
+
             setup_get_string_descriptor_send_data:
             rjmp usb_send_data_short ;tail call
-            
+
         setup_get_interface_descriptor:
             ret
         setup_get_endpoint_descriptor:
@@ -484,19 +484,19 @@
 
         ;send the data
         usb_send_queued_data r24_temp_reg
-        
+
         sub r22_data_len, r10_max_packet_len
-        
+
         ;if z is set, we are done sending data, and need to send a zlp
         ;if c is set, we are done sending data, and don't need to send a zlp
         ;if neither of the above, we have more data to send
-        
+
         brbs BIT_C, usb_send_data_short_end
         brbc BIT_Z, usb_send_data_short
-        
+
         ;send a zlp
         usb_send_zlp r24
-        
+
         usb_send_data_short_end:
     #undef r22_data_len
     #undef r23_current_packet_len
