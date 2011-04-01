@@ -192,6 +192,9 @@
         /*0x0B*/ rjmp setup_set_interface
         /*0x0C*/ rjmp setup_synch_frame
 
+    setup_unknown:
+        ret
+
     handle_hid_packet:
         cpi r17_bRequest, 0x0c
         brsh setup_unknown
@@ -248,9 +251,6 @@
         ret
 
     hid_set_protocol:
-        ret
-
-    setup_unknown:
         ret
 
     setup_get_status:
