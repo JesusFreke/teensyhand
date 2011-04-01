@@ -566,9 +566,55 @@
 
         clear_bit:
             cbi IO_PORTD, 6
+
+            ;select ep1
+            ldi r16, 1
+            sts UENUM, r16
+
+            clear_bit_wait_for_rwal:
+            lds r16, UEINTX
+            sbrs r16, RWAL
+            rjmp clear_bit_wait_for_rwal
+
+            clr r17
+            ldi r16, 21
+
+            clear_bit_send_loop:
+            sts UEDATX, r17
+            dec r16
+            brne clear_bit_send_loop
+
+            lds r16, UEINTX
+            andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI))
+            sts UEINTX, r16
+
             reti
 
         set_bit:
+            ;select ep1
+            ldi r16, 1
+            sts UENUM, r16
+
+            set_bit_wait_for_rwal:
+            lds r16, UEINTX
+            sbrs r16, RWAL
+            rjmp set_bit_wait_for_rwal
+
+            ldi r16, 0x04 ;a
+            sts UEDATX, r16
+
+            clr r17
+            ldi r16, 20
+
+            set_bit_send_loop:
+            sts UEDATX, r17
+            dec r16
+            brne set_bit_send_loop
+
+            lds r16, UEINTX
+            andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI))
+            sts UEINTX, r16
+
             sbi IO_PORTD, 6
             reti
 
