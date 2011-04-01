@@ -21,7 +21,7 @@
 #define DESC_OTHER_SPEED_CONFIGURATION  7
 #define DESC_INTERFACE_POWER            8
 #define DESC_HID                        0x21
-#define DESC_REPORT                     0x22
+#define DESC_HID_REPORT                 0x22
 #define DESC_PHYSICAL                   0x23
 
 /*Feature values for CLEAR_FEATURE and SET_FEATURE requests*/

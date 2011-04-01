@@ -44,7 +44,7 @@ HID_DESCRIPTOR:
 /*bcdHID*/              .word 0x0111
 /*bCountryCode*/        .byte 0x21 ;US
 /*bNumDescriptors*/     .byte 0x01
-/*bDescriptorType*/     .byte DESC_REPORT
+/*bDescriptorType*/     .byte DESC_HID_REPORT
 /*wDescriptorLength*/   .word REPORT_DESCRIPTOR_END - REPORT_DESCRIPTOR
 HID_DESCRIPTOR_END:
 
