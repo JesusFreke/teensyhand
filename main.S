@@ -274,32 +274,77 @@
         ret
 
     setup_get_descriptor:
+        ;check for normal descriptor request
         cpi r16_bmRequestType, 0b10000000
-        brne setup_get_descriptor_end
+        breq setup_get_normal_descriptor
 
-        cpi r19_wValue_hi, 0x09
-        brsh setup_get_descriptor_end
+        ;check for HID class descriptor request
+        cpi r16_bmRequestType, 0b10000001
+        breq setup_get_hid_class_descriptor
 
-        ;switch based on requested descriptor type
-        ldi zl, lo8(pm(setup_get_descriptor_table))
-        ldi zh, hi8(pm(setup_get_descriptor_table))
-        add zl, r19_wValue_hi
-        adc zh, r15_zero
-        ijmp
-
+        ;otherwise, unsupported
         setup_get_descriptor_end:
-        ret
+            ret
 
-        setup_get_descriptor_table:
-        /*0x00*/ rjmp setup_get_descriptor_end
-        /*0x01*/ rjmp setup_get_device_descriptor
-        /*0x02*/ rjmp setup_get_configuration_descriptor
-        /*0x03*/ rjmp setup_get_string_descriptor
-        /*0x04*/ rjmp setup_get_interface_descriptor
-        /*0x05*/ rjmp setup_get_endpoint_descriptor
-        /*0x06*/ rjmp setup_get_device_qualifier_descriptor
-        /*0x07*/ rjmp setup_get_other_speed_configuration_descriptor
-        /*0x08*/ rjmp setup_get_interface_power_descriptor
+        setup_get_hid_descriptor:
+            ret
+
+        setup_get_hid_report_descriptor:
+            ;if more than 255 bytes are requested, round down to 255
+            ;(i.e. set the low byte to 255 - the high byte is otherwise ignored)
+            cpse r23_wLength_hi, r15_zero
+            ldi r22_wLength_lo, 0xFF
+
+            ;TODO: do we need to send a zlp if 0 bytes are requested?
+            cpi r22_wLength_lo, 0
+            breq setup_get_hid_report_descriptor_end
+
+            ldi zl, lo8(REPORT_DESCRIPTOR)
+            ldi zh, hi8(REPORT_DESCRIPTOR)
+
+            ;check if the requested number of bytes is less than the descriptor length
+            cpi r22_wLength_lo, 0x00
+            brlo setup_get_hid_report_descriptor_send_data
+            ldi r22_wLength_lo, 0x00
+
+            setup_get_hid_report_descriptor_send_data:
+            rjmp usb_send_data_short ;tail call
+
+            setup_get_hid_report_descriptor_end:
+            ret
+
+        setup_get_normal_descriptor:
+            ;make sure that the descriptor type index is within the bounds of the table
+            cpi r19_wValue_hi, setup_get_normal_descriptor_table_end - setup_get_normal_descriptor_table
+            brsh setup_get_descriptor_end
+
+            ;switch based on requested descriptor type
+            ldi zl, lo8(pm(setup_get_normal_descriptor_table))
+            ldi zh, hi8(pm(setup_get_normal_descriptor_table))
+            add zl, r19_wValue_hi
+            adc zh, r15_zero
+            ijmp
+
+            setup_get_normal_descriptor_table:
+            /*0x00*/ rjmp setup_get_descriptor_end
+            /*0x01*/ rjmp setup_get_device_descriptor
+            /*0x02*/ rjmp setup_get_configuration_descriptor
+            /*0x03*/ rjmp setup_get_string_descriptor
+            /*0x04*/ rjmp setup_get_interface_descriptor
+            /*0x05*/ rjmp setup_get_endpoint_descriptor
+            /*0x06*/ rjmp setup_get_device_qualifier_descriptor
+            /*0x07*/ rjmp setup_get_other_speed_configuration_descriptor
+            /*0x08*/ rjmp setup_get_interface_power_descriptor
+            setup_get_normal_descriptor_table_end:
+
+        setup_get_hid_class_descriptor:
+            cpi r19_wValue_hi, DESC_HID
+            breq setup_get_hid_descriptor
+
+            cpi r19_wValue_hi, DESC_HID_REPORT
+            breq setup_get_hid_report_descriptor
+
+            rjmp setup_get_descriptor_end
 
         setup_get_device_descriptor:
             ;if more than 255 bytes are requested, round down to 255
