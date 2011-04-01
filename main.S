@@ -218,6 +218,19 @@
         /*0x0b*/ rjmp hid_set_protocol
 
     hid_get_report:
+        ;TODO: we should return the actual current input state here
+        ;For now, we'll just return a blank report
+        usb_wait_for_txini r24
+        clr r17
+        ldi r16, 21
+
+        hid_get_report_send_loop:
+            sts UEDATX, r17
+            dec r16
+            brne hid_get_report_send_loop
+
+        ;send the data
+        usb_send_queued_data r16
         ret
 
     hid_get_idle:
