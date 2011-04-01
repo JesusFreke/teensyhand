@@ -57,13 +57,11 @@
         ;enable interrupts
         sei
 
-        RJMP loop
-
         ;enable interrupt on timer compare match
         ldi r16, MASK(OCIE1A)
         sts TIMSK1, r16
 
-        ;1s delay @ 2mhz
+        ;2s delay @ 16mhz
         ldi r16, 0x7A
         sts OCR1AH, r16
         ldi r16, 0x12
@@ -72,7 +70,7 @@
         ;select CTC mode using OCR1A register
         ;select clk/64
         ;start the timer
-        ldi r16, MASK(WGM12) | TIMER_CLK_64
+        ldi r16, MASK(WGM12) | TIMER_CLK_1024
         sts TCCR1B, r16
 
         loop:
