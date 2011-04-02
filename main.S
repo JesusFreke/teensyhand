@@ -17,6 +17,10 @@
 
         GPIO_DIR_OUTPUT GPIOD, 6
 
+        ;initialize register with commonly used "zero" value
+        #define r15_zero r15
+        clr r15_zero
+
         ;initialize hid idle period to 500ms (125*4ms)
         ldi r16, 0x7d
         sts hid_idle_period, r16
@@ -169,8 +173,6 @@
         ldi zl, lo8(pm(setup_request_table))
         ldi zh, hi8(pm(setup_request_table))
         add zl, r17_bRequest
-        #define r15_zero r15
-        clr r15_zero
         adc zh, r15_zero
         ijmp
 
