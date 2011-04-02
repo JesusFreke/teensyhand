@@ -162,21 +162,21 @@ Only for use with isochronous endpoints*/
 #define LOCAL_ITEM_DELIMITER            0x0A << 4
 
 
-.macro usb_wait_for_txini tempreg
+.macro USB_WAIT_FOR_TXINI tempreg
     usb_wait_for_txini_\@:
     lds \tempreg, UEINTX
     sbrs \tempreg, TXINI
     rjmp usb_wait_for_txini_\@
 .endm
 
-.macro usb_send_queued_data tempreg
+.macro USB_SEND_QUEUED_DATA tempreg
     lds \tempreg, UEINTX
     cbr \tempreg, MASK(TXINI)
     sts UEINTX, \tempreg
 .endm
 
-.macro usb_send_zlp tempreg
-    usb_wait_for_txini \tempreg
+.macro USB_SEND_ZLP tempreg
+    USB_WAIT_FOR_TXINI \tempreg
     cbr \tempreg, MASK(TXINI)
     sts UEINTX, \tempreg
 .endm

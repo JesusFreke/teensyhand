@@ -13,7 +13,7 @@
     .global main
     main:
         ;set clock to 16mhz
-        set_clock_speed r16, CLOCK_DIV_1
+        SET_CLOCK_SPEED r16, CLOCK_DIV_1
 
         sbi IO_DDRD, 6
 
@@ -220,7 +220,7 @@
     hid_get_report:
         ;TODO: we should return the actual current input state here
         ;For now, we'll just return a blank report
-        usb_wait_for_txini r24
+        USB_WAIT_FOR_TXINI r24
         clr r17
         ldi r16, 21
 
@@ -230,7 +230,7 @@
             brne hid_get_report_send_loop
 
         ;send the data
-        usb_send_queued_data r16
+        USB_SEND_QUEUED_DATA r16
         ret
 
     hid_get_idle:
@@ -244,7 +244,7 @@
 
     hid_set_idle:
         sts hid_idle_period, r19_wValue_hi
-        usb_send_zlp r16
+        USB_SEND_ZLP r16
         ret
 
     hid_set_protocol:
@@ -272,9 +272,9 @@
         ;store the new address, but don't enable it yet
         sts UDADDR, r18_wValue_lo
 
-        usb_send_zlp r24
+        USB_SEND_ZLP r24
 
-        usb_wait_for_txini r24
+        USB_WAIT_FOR_TXINI r24
 
         ;enable the new address
         sbr r18_wValue_lo, MASK(ADDEN)
@@ -495,7 +495,7 @@
         ldi r16, 0
         sts UENUM, r16
 
-        usb_send_zlp r19
+        USB_SEND_ZLP r19
         ret
 
     setup_get_interface:
@@ -526,7 +526,7 @@
         usb_send_data_short_1:
 
         ;wait for txini to become set before queueing any data
-        usb_wait_for_txini r24
+        USB_WAIT_FOR_TXINI r24
 
         ;queue the data for the next packet
         usb_send_data_short_loop:
@@ -536,7 +536,7 @@
         brne usb_send_data_short_loop
 
         ;send the data
-        usb_send_queued_data r24_temp_reg
+        USB_SEND_QUEUED_DATA r24_temp_reg
 
         sub r22_data_len, r10_max_packet_len
 
@@ -547,8 +547,7 @@
         brbs BIT_C, usb_send_data_short_end
         brbc BIT_Z, usb_send_data_short
 
-        ;send a zlp
-        usb_send_zlp r24
+        USB_SEND_ZLP r24
 
         usb_send_data_short_end:
     #undef r22_data_len
