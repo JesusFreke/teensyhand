@@ -57,3 +57,21 @@
 #define BIT_H 5
 #define BIT_T 6
 #define BIT_I 7
+
+#define CLOCK_DIV_1     0b0000
+#define CLOCK_DIV_2     0b0001
+#define CLOCK_DIV_4     0b0010
+#define CLOCK_DIV_8     0b0011
+#define CLOCK_DIV_16    0b0100
+#define CLOCK_DIV_32    0b0101
+#define CLOCK_DIV_64    0b0110
+#define CLOCK_DIV_128   0b0111
+#define CLOCK_DIV_256   0b1000
+
+.macro set_clock_speed tempreg, div
+    ldi \tempreg, 0x80
+    sts CLKPR, \tempreg
+
+    ldi \tempreg, div
+    sts CLKPR, \tempreg
+.endm

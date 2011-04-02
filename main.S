@@ -12,11 +12,8 @@
 .text
     .global main
     main:
-        ldi r16, 0x80
-        sts CLKPR, r16
-
-        clr r16
-        sts CLKPR, r16
+        ;set clock to 16mhz
+        set_clock_speed r16, CLOCK_DIV_1
 
         sbi IO_DDRD, 6
 
