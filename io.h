@@ -68,10 +68,21 @@
 #define CLOCK_DIV_128   0b0111
 #define CLOCK_DIV_256   0b1000
 
+#define GPIOA 0
+#define GPIOB 1
+#define GPIOC 2
+#define GPIOD 3
+#define GPIOE 4
+#define GPIOF 5
+
 .macro SET_CLOCK_SPEED tempreg, div
     ldi \tempreg, 0x80
     sts CLKPR, \tempreg
 
     ldi \tempreg, \div
     sts CLKPR, \tempreg
+.endm
+
+.macro GPIO_DIR_OUTPUT port, pin
+    sbi (0x00 * \port) + 1, \pin
 .endm

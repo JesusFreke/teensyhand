@@ -15,7 +15,7 @@
         ;set clock to 16mhz
         SET_CLOCK_SPEED r16, CLOCK_DIV_1
 
-        sbi IO_DDRD, 6
+        GPIO_DIR_OUTPUT GPIOD, 6
 
         ;initialize hid idle period to 500ms (125*4ms)
         ldi r16, 0x7d
