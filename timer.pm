@@ -16,7 +16,7 @@ sub timer1_init {
     _sts TCCR1B, r16;
 }
 
-global_sub "t1_int", sub {
+emit_global_sub "t1_int", sub {
     if_io_bit_set IO(PORTD), 6, sub {
         _cbi IO(PORTD), 6;
 

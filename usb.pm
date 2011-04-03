@@ -33,10 +33,10 @@ sub usb_init {
     _sts UDIEN, r16;
 }
 
-global_sub "usb_gen", sub {
+emit_global_sub "usb_gen", sub {
     _reti;
 };
 
-global_sub "usb_enp", sub {
+emit_global_sub "usb_enp", sub {
     _reti;
 };

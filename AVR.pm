@@ -99,7 +99,7 @@ sub memory_variable {
     *$name = sub () { $name };
 }
 
-sub global_sub {
+sub emit_global_sub {
     my($name) = shift || die "no sub name specified";
     my($block) = shift || die "no block specified";
 

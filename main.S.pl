@@ -21,7 +21,7 @@ die $@ if ($@);
 do "timer.pm";
 die $@ if ($@);
 
-global_sub "main", sub {
+emit_global_sub "main", sub {
     SET_CLOCK_SPEED r16, CLOCK_DIV_1;
 
     CONFIGURE_GPIO(port=>GPIO_PORT_D, pin=>PIN_6, dir=>GPIO_DIR_OUT);
