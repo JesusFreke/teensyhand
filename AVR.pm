@@ -99,17 +99,22 @@ sub memory_variable {
     *$name = sub () { $name };
 }
 
-sub emit_global_sub {
+sub emit_sub {
     my($name) = shift || die "no sub name specified";
     my($block) = shift || die "no block specified";
+    my($global) = shift;
 
     emit_blank_line;
-    emit ".global $name\n";
+    emit ".global $name\n" if $global;
     emit "$name:\n";
     indent();
     &$block();
     deindent();
     emit_blank_line;
+}
+
+sub emit_global_sub {
+    emit_sub @_, 1;
 }
 
 my($do_while_counter) = 0;
