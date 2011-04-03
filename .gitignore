@@ -2,3 +2,4 @@
 *.hex
 *.elf
 *.lst
+main.S
