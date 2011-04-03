@@ -1,10 +1,15 @@
 MODULE=teensytest
 
-SRCS=$(wildcard *.S)
-OBJS=$(SRCS:.S=.o)
+SRCS=$(wildcard *.S) $(wildcard *.S.pl)
+OBJS=$(patsubst %.S.pl,%.o,$(SRCS:.S=.o))
 
 all: $(MODULE).hex
 list: all $(MODULE).lst
+
+.PRECIOUS: %.S
+
+%.S: %.S.pl
+	@perl $< > $@
 
 %.o: %.S
 	@avr-gcc -nostdlib -mmcu=at90usb1286 -c $< -o $@
@@ -23,6 +28,7 @@ clean:
 	@rm -rf *.elf
 	@rm -rf *.hex
 	@rm -rf *.lst
+	@rm -rf main.S
 
 install: $(MODULE).hex
 	@echo install: waiting for device...
