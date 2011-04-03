@@ -36,12 +36,16 @@ BEGIN {
         "brid",
         "brie",
         "brne",
+        "brsh",
         "brtc",
         "bst",
         "call",
         "cbi",
+        "cbr",
         "clr",
+        "cpi",
         "dec",
+        "ijmp",
         "ldi",
         "lds",
         "mov",
@@ -51,6 +55,7 @@ BEGIN {
         "sbi",
         "sbic",
         "sbis",
+        "sbiw",
         "sbrc",
         "sbrs",
         "sei",
@@ -78,6 +83,10 @@ BEGIN {
 
         *$regname = sub () { $regname; };
     }
+
+    use constant zl => "r30";
+    use constant zh => "r31";
+    use constant r15_zero => "r15";
 }
 
 sub indent {
@@ -135,6 +144,62 @@ sub do_while(&&) {
     &$block();
     deindent();
     &$branch_insn(@_, $label);
+    emit_blank_line;
+}
+
+my($jump_table_counter) = 0;
+sub jump_table {
+    my(%args) = @_;
+    my($value) = $args{value};
+    my($initial_index) = $args{initial_index};
+    my($table) = $args{table} || die "no jump table specified";
+    my($invalid_value_label) = $args{invalid_value_label};
+
+    my($table_size) = scalar(@$table);
+
+    die "Invalid table index/size" if ($initial_index + $table_size > 256);
+
+    emit_blank_line;
+
+    my($emit_end_label) = 0;
+    my($invalid_label);
+    if ($invalid_value_label) {
+        $invalid_label = $invalid_value_label;
+    } else {
+        $invalid_label = "jump_table_end_$jump_table_counter";
+        $emit_end_label = 1;
+    }
+
+    my($table_label) = "jump_table_$jump_table_counter";
+    $jump_table_counter++;
+
+    #check the bounds of the value if applicable
+    if ($initial_index < 0) {
+        _cpi $value, $initial_index;
+        _brlo $invalid_label;
+    }
+    if ($initial_index + $table_size < 256) {
+        _cpi $value, $table_size + $initial_index;
+        _brsh $invalid_label;
+    }
+
+    _ldi zl, lo8(pm($table_label));
+    _ldi zh, hi8(pm($table_label));
+
+    _add zl, $value;
+    _adc zh, r15_zero;
+    _sbiw zl, $initial_index if ($initial_index);
+
+    _ijmp;
+
+    emit_blank_line;
+    emit "$table_label:\n";
+    indent;
+    foreach my $item (@$table) {
+        _rjmp $item;
+    };
+    emit "$invalid_label:\n" if ($emit_end_label);
+    deindent;
     emit_blank_line;
 }
 
@@ -312,6 +377,18 @@ sub IO {
     my($addr) = shift;
     die "invalid io adress - $addr" if ($addr < 0x20 || $addr > 0x5f);
     return $addr - 0x20;
+}
+
+sub pm {
+    return "pm($_[0])";
+}
+
+sub hi8 {
+    return "hi8($_[0])";
+}
+
+sub lo8 {
+    return "lo8($_[0])";
 }
 
 sub MAKE_8BIT {

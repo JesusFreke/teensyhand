@@ -6,8 +6,6 @@ BEGIN {
     die $@ if ($@);
 }
 
-use constant r15_zero=>"r15";
-
 BEGIN {
     #done in begin section, so that declared constants can be accessed further down
     memory_variable "current_configuration";
