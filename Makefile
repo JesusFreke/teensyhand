@@ -11,6 +11,8 @@ OBJS=$(patsubst %.S.pl,%.o,$(SRCS:.S=.o))
 all: $(MODULE).hex
 list: all $(MODULE).lst
 
+main.S: AVR.pm usb.pm timer.pm
+
 .PRECIOUS: %.S
 
 %.S: %.S.pl
