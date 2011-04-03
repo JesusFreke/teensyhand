@@ -44,6 +44,7 @@ BEGIN {
         "dec",
         "ldi",
         "lds",
+        "mov",
         "ret",
         "reti",
         "rjmp",
@@ -297,6 +298,15 @@ use constant STALLEDE => 1;
 use constant TXINE => 0;
 
 use constant UEDATX => 0xf1;
+
+use constant UEINT => 0xf4;
+use constant EPINT6 => 6;
+use constant EPINT5 => 5;
+use constant EPINT4 => 4;
+use constant EPINT3 => 3;
+use constant EPINT2 => 2;
+use constant EPINT1 => 1;
+use constant EPINT0 => 0;
 
 sub IO {
     my($addr) = shift;

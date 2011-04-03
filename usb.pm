@@ -71,5 +71,23 @@ emit_sub "eor_int", sub {
 };
 
 emit_global_sub "usb_enp", sub {
+    #check for endpoints with interrupts
+    _lds r0, UEINT;
+
+    #check EP0
+    if_bit_set r0, EPINT0, sub {
+        SELECT_EP r16, EP_0;
+
+        #set max_packet_length
+        _ldi r16, 0x40;
+        _mov r10, r16;
+
+        _call "handle_setup_packet";
+    };
+
     _reti;
+};
+
+emit_sub "handle_setup_packet", sub {
+    _ret;
 };
