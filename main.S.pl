@@ -6,18 +6,20 @@ BEGIN {
     die $@ if ($@);
 }
 
+use constant r15_zero=>"r15";
+
+BEGIN {
+    #done in begin section, so that declared constants can be accessed further down
+    memory_variable "current_configuration";
+    memory_variable "hid_idle_period";
+    emit ".text\n";
+}
+
 do "usb.pm";
 die $@ if ($@);
 
 do "timer.pm";
 die $@ if ($@);
-
-use constant r15_zero=>"r15";
-
-BEGIN {
-    memory_variable "current_configuration";
-    memory_variable "hid_idle_period";
-}
 
 global_sub "main", sub {
     SET_CLOCK_SPEED r16, CLOCK_DIV_1;
