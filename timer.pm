@@ -1,3 +1,5 @@
+use strict;
+
 sub timer1_init {
     #enable interrupt on timer compare match
     _ldi r16, MASK(OCIE1A);

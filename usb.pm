@@ -1,3 +1,5 @@
+use strict;
+
 sub usb_init {
     #initialize hid idle period to 500ms (125*4ms)
     _ldi r16, 125;
@@ -37,7 +39,7 @@ emit_global_sub "usb_gen", sub {
     #check for End of Reset interrupt
     _lds r16, UDINT;
     _sbrc r16, EORSTI;
-    _call eor_int;
+    _call "eor_int";
 
     #clear USB device interrupts
     _ldi r16, 0;
@@ -58,7 +60,7 @@ emit_sub "eor_int", sub {
     _ldi r16, EPTYPE_CONTROL | EPDIR_OUT;
     _sts UECFG0X, r16;
 
-    _ldi r16, EPSIZE_64 | EPBANK_1 | MASK(ALLOC);
+    _ldi r16, EPSIZE_64 | EPBANK_SINGLE | MASK(ALLOC);
     _sts UECFG1X, r16;
 
     #enable setup packet interrupt
