@@ -142,10 +142,10 @@ my($bit_cleared) = 2;
 
 my($if_bit_counter) = 0;
 sub _if_bit {
-    my($set) = shift || die;
-    my($address) = shift || die "no address specified";
-    my($bit) = shift || die "no bit specified";
-    my($block) = shift || die "no code block";
+    my($set) = shift;
+    my($address) = shift;
+    my($bit) = shift;
+    my($block) = shift;
 
     my($insn);
 
