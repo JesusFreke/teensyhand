@@ -1,6 +1,11 @@
 MODULE=teensyhand
 
-SRCS=$(wildcard *.S) $(wildcard *.S.pl)
+#find all the .S.pl files
+PERL_SRCS=$(wildcard *.S.pl)
+#find all the .S files that weren't generated from a .S.pl file
+ASSEM_SRCS=$(filter-out $(PERL_SRCS:.S.pl=.S),$(wildcard *.S))
+
+SRCS=$(PERL_SRCS) $(ASSEM_SRCS)
 OBJS=$(patsubst %.S.pl,%.o,$(SRCS:.S=.o))
 
 all: $(MODULE).hex
