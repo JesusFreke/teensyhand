@@ -38,6 +38,7 @@ BEGIN {
         "brne",
         "brtc",
         "bst",
+        "call",
         "cbi",
         "clr",
         "dec",
@@ -48,6 +49,7 @@ BEGIN {
         "rjmp",
         "sbi",
         "sbis",
+        "sbrc",
         "sbrs",
         "sei",
         "sts"
@@ -212,6 +214,14 @@ use constant LSM => 2;
 use constant RMWKUP => 1;
 use constant DETACH => 0;
 
+use constant UDINT => 0xe1;
+use constant UPRSMI => 6;
+use constant EORSMI => 5;
+use constant WAKEUPI => 4;
+use constant EORSTI => 3;
+use constant SOFI => 2;
+use constant SUSPI => 0;
+
 use constant UDIEN => 0xe2;
 use constant UPRSME => 6;
 use constant EORSME => 5;
@@ -231,6 +241,40 @@ use constant STALLEDI => 1;
 use constant TXINI => 0;
 
 use constant UENUM => 0xe9;
+
+use constant UECONX => 0xeb;
+use constant STALLRQ => 5;
+use constant STALLRQC => 4;
+use constant RSTDT => 3;
+use constant EPEN => 0;
+
+use constant UECFG1X => 0xed;
+use constant EPSIZE_8 => 0b000 << 4;
+use constant EPSIZE_16 => 0b001 << 4;
+use constant EPSIZE_32 => 0b010 << 4;
+use constant EPSIZE_64 => 0b011 << 4;
+use constant EPSIZE_128 => 0b100 << 4;
+use constant EPSIZE_256 => 0b101 << 4;
+use constant EPBANK_SINGLE => 0b00 << 2;
+use constant EPBANK_DOUBLE => 0b01 << 2;
+use constant ALLOC => 1;
+
+use constant UECFG0X => 0xec;
+use constant EPTYPE_CONTROL => 0b00 << 6;
+use constant EPTYPE_ISO => 0b01 << 6;
+use constant EPTYPE_BULK => 0b10 << 6;
+use constant EPTYPE_INT => 0b11 << 6;
+use constant EPDIR_IN => 1;
+use constant EPDIR_OUT => 0;
+
+use constant UEIENX => 0xf0;
+use constant FLERRE => 7;
+use constant NAKINE => 6;
+use constant NAKOUTE => 4;
+use constant RXSTPE => 3;
+use constant RXOUTE => 2;
+use constant STALLEDE => 1;
+use constant TXINE => 0;
 
 use constant UEDATX => 0xf1;
 
@@ -279,6 +323,13 @@ use constant PIN_4 => 5;
 use constant PIN_5 => 6;
 use constant PIN_6 => 7;
 use constant PIN_7 => 8;
+
+use constant EP_0 => 1;
+use constant EP_1 => 2;
+use constant EP_2 => 3;
+use constant EP_3 => 4;
+use constant EP_4 => 5;
+use constant EP_5 => 6;
 
 sub CONFIGURE_GPIO {
     my(%args) = @_;

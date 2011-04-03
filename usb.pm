@@ -34,7 +34,38 @@ sub usb_init {
 }
 
 emit_global_sub "usb_gen", sub {
+    #check for End of Reset interrupt
+    _lds r16, UDINT;
+    _sbrc r16, EORSTI;
+    _call eor_int;
+
+    #clear USB device interrupts
+    _ldi r16, 0;
+    _sts UDINT, r16;
+
     _reti;
+};
+
+#this interrupt occurs when the usb controller has finished reseting, and is ready to be used
+emit_sub "eor_int", sub {
+    SELECT_EP r16, EP_0;
+
+    #enable ep0
+    _ldi r16, MASK(EPEN);
+    _sts UECONX, r16;
+
+    #configure ep0
+    _ldi r16, EPTYPE_CONTROL | EPDIR_OUT;
+    _sts UECFG0X, r16;
+
+    _ldi r16, EPSIZE_64 | EPBANK_1 | MASK(ALLOC);
+    _sts UECFG1X, r16;
+
+    #enable setup packet interrupt
+    _ldi r16, MASK(RXSTPE);
+    _sts UEIENX, r16;
+
+    _ret;
 };
 
 emit_global_sub "usb_enp", sub {
