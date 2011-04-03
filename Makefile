@@ -1,4 +1,4 @@
-MODULE=teensytest
+MODULE=teensyhand
 
 SRCS=$(wildcard *.S) $(wildcard *.S.pl)
 OBJS=$(patsubst %.S.pl,%.o,$(SRCS:.S=.o))
