@@ -48,6 +48,7 @@ BEGIN {
         "reti",
         "rjmp",
         "sbi",
+        "sbic",
         "sbis",
         "sbrc",
         "sbrs",
@@ -136,19 +137,30 @@ sub do_while(&&) {
     emit_blank_line;
 }
 
-my($if_io_bit_set_counter) = 0;
-sub if_io_bit_set {
-    my($address) = shift || die "no port specified";
-    my($pin) = shift || die "no port specified";
+my($bit_set) = 1;
+my($bit_cleared) = 2;
+
+my($if_bit_counter) = 0;
+sub _if_bit {
+    my($set) = shift || die;
+    my($address) = shift || die "no address specified";
+    my($bit) = shift || die "no bit specified";
     my($block) = shift || die "no code block";
 
-    die "invalid address specified - $address" if ($address < 0 || $address > 0x1f);
+    my($insn);
 
-    my($label) = "if_io_bit_set_$if_io_bit_set_counter";
-    $if_io_bit_set_counter++;
+    if ($address =~ /^r[0-9]+$/) {
+        $insn = $set?\&_sbrs:\&_sbrc;
+    } else {
+        die "invalid address specified - $address" if ($address < 0 || $address > 0x1f);
+        $insn = $set?\&_sbis:\&_sbic;
+    }
+
+    my($label) = "if_bit_$if_bit_counter";
+    $if_bit_counter++;
 
     emit_blank_line;
-    _sbis $address, $pin;
+    &$insn($address, $bit);
     _rjmp $label;
 
     indent();
@@ -156,6 +168,14 @@ sub if_io_bit_set {
     deindent();
     emit_blank_line;
     emit("$label:\n");
+}
+
+sub if_bit_set {
+    _if_bit($bit_set, @_);
+}
+
+sub if_bit_cleared {
+    _if_bit($bit_cleared, @_);
 }
 
 use constant CLOCK_DIV_1 =>     0b0000;
