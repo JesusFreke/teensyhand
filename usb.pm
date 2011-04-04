@@ -35,6 +35,31 @@ sub usb_init {
     _sts UDIEN, r16;
 }
 
+sub USB_WAIT_FOR_TXINI {
+    my($tempreg) = shift;
+
+    do_while {
+        _lds $tempreg, UEINTX;
+        _sbrs $tempreg, TXINI;
+    } \&_rjmp;
+}
+
+sub USB_SEND_QUEUED_DATA {
+    my($tempreg) = shift;
+
+    _lds $tempreg, UEINTX;
+    _cbr $tempreg, MASK(TXINI);
+    _sts UEINTX, $tempreg;
+}
+
+sub USB_SEND_ZLP {
+    my($tempreg) = shift;
+
+    USB_WAIT_FOR_TXINI $tempreg;
+    _cbr $tempreg, MASK(TXINI);
+    _sts UEINTX, $tempreg;
+}
+
 emit_global_sub "usb_gen", sub {
     #check for End of Reset interrupt
     _lds r16, UDINT;
@@ -170,7 +195,82 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "setup_get_descriptor", sub {
-                _ret;
+                #check for normal descriptor request
+                _cpi $r16_bmRequestType, 0b10000000;
+                forward_branch \&_brne, sub {
+                    jump_table(value=>$r19_wValue_hi, initial_index=>0, invalid_value_label=>"setup_get_descriptor_end", table=>[
+                        "setup_get_descriptor_end",                         #0x00
+                        "setup_get_device_descriptor",                      #0x01
+                        "setup_get_configuration_descriptor",               #0x02
+                        "setup_get_string_descriptor",                      #0x03
+                        "setup_get_interface_descriptor",                   #0x04
+                        "setup_get_endpoint_descriptor",                    #0x05
+                        "setup_get_device_qualifier_descriptor",            #0x06
+                        "setup_get_other_speed_configuration_descriptor",   #0x07
+                        "setup_get_interface_power_descriptor"              #0x08
+                    ]);
+                };
+
+                #check for HID class descriptor request
+                #_cpi $r16_bmRequestType, 0b10000001;
+                #forward_branch \&_brne, sub {
+                #};
+
+                #otherwise, unsupported
+                emit "setup_get_descriptor_end:\n";
+                indent;
+                    _ret;
+                deindent;
+
+                emit_sub "setup_get_device_descriptor", sub {
+                    #if more than 255 bytes are requested, round down to 255
+                    #(i.e. set the low byte to 255 - the high byte is otherwise ignored)
+                    _cpse $r23_wLength_hi, r15_zero;
+                    _ldi $r22_wLength_lo, 0xff;
+
+                    #TODO: do we need to send a zlp if 0 bytes are requested?
+                    _cpi $r22_wLength_lo, 0;
+                    _breq "setup_get_descriptor_end";
+
+                    _ldi zl, lo8("DEVICE_DESCRIPTOR");
+                    _ldi zh, hi8("DEVICE_DESCRIPTOR");
+
+                    #check if the requested number of bytes is less than the descriptor length
+                    _cpi $r22_wLength_lo, 0x12;
+                    forward_branch \&_brlo, sub {
+                        _ldi $r22_wLength_lo, 0x12;
+                    };
+
+                    _rjmp "usb_send_data_short"; #tail call
+                };
+
+                emit_sub "setup_get_configuration_descriptor", sub {
+                    _ret;
+                };
+
+                emit_sub "setup_get_string_descriptor", sub {
+                    _ret;
+                };
+
+                emit_sub "setup_get_interface_descriptor", sub {
+                    _ret;
+                };
+
+                emit_sub "setup_get_endpoint_descriptor", sub {
+                    _ret;
+                };
+
+                emit_sub "setup_get_device_qualifier_descriptor", sub {
+                    _ret;
+                };
+
+                emit_sub "setup_get_other_speed_configuration_descriptor", sub {
+                    _ret;
+                };
+
+                emit_sub "setup_get_interface_power_descriptor", sub {
+                    _ret;
+                };
             };
 
             emit_sub "setup_set_descriptor", sub {
@@ -199,5 +299,54 @@ emit_sub "eor_int", sub {
         };
     };
 
+    #Sends up to 255 bytes to the currently selected usb endpoint
+    #zh:zl should point to the data to send
+    #r22 should contain the amount of data to send
+    #r10 should contain the maximum packet length for this endpoint
+    #r22, r23 and r24 will be clobbered on exit
+    emit_sub "usb_send_data_short", sub {
+        my($r22_data_len) = "r22";
+        my($r23_current_packet_len) = "r23";
+        my($r24_temp_reg) = "r24";
 
+        do_while(sub {
+            #load the size of the next packet into r23
+            _mov $r23_current_packet_len, $r10_max_packet_length;
+            _cp $r23_current_packet_len, $r22_data_len;
+
+            #if data_len <= current_packet_len
+            forward_branch \&_brlo, sub {
+                _mov $r23_current_packet_len, $r22_data_len;
+            };
+
+            #txini must be set before we queue any data
+            USB_WAIT_FOR_TXINI r24;
+
+            #queue the data for the next packet
+            do_while {
+                _lpm $r24_temp_reg, "z+";
+                _sts UEDATX, $r24_temp_reg;
+                _dec r23;
+            } \&_brne;
+
+            #send the data
+            USB_SEND_QUEUED_DATA $r24_temp_reg;
+
+            _sub $r22_data_len, $r10_max_packet_length;
+
+        }, sub {
+            #if z is set, we are done sending data, and need to send a zlp
+            #if c is set, we are done sending data, and don't need to send a zlp
+            #if neither of the above, we have more data to send
+
+            my($loop_begin_label) = shift;
+
+            forward_branch(sub { _brbs BIT_C, $_[0]; }, sub {
+                _brbc BIT_Z, $loop_begin_label;
+                USB_SEND_ZLP r24;
+            });
+        });
+
+        _ret;
+    };
 }

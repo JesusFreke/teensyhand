@@ -35,6 +35,7 @@ BEGIN {
         "brhs",
         "brid",
         "brie",
+        "brlo",
         "brne",
         "brsh",
         "brtc",
@@ -43,11 +44,14 @@ BEGIN {
         "cbi",
         "cbr",
         "clr",
+        "cp",
         "cpi",
+        "cpse",
         "dec",
         "ijmp",
         "ldi",
         "lds",
+        "lpm",
         "mov",
         "ret",
         "reti",
@@ -59,7 +63,8 @@ BEGIN {
         "sbrc",
         "sbrs",
         "sei",
-        "sts"
+        "sts",
+        "sub"
     );
 
     for my $name (@insns) {
@@ -203,6 +208,22 @@ sub jump_table {
     emit_blank_line;
 }
 
+my($forward_branch_counter) = 0;
+sub forward_branch {
+    my($branch_insn) = shift || die "no branch instruction given";
+    my($block) = shift || die "no code block given";
+
+    my($label) = "forward_branch_$forward_branch_counter";
+    $forward_branch_counter++;
+
+    &$branch_insn(@_, $label);
+    indent;
+    &$block();
+    deindent;
+    emit_blank_line;
+    emit "$label:\n"
+}
+
 my($bit_set) = 1;
 my($bit_cleared) = 2;
 
@@ -256,6 +277,16 @@ use constant PLOCK => 0;
 use constant PLLE => 1;
 use constant PLL_4 => 0b011 << 2;
 use constant PLL_8 => 0b101 << 2;
+
+use constant SREG => 0x5f;
+use constant BIT_C => 0;
+use constant BIT_Z => 1;
+use constant BIT_N => 2;
+use constant BIT_V => 3;
+use constant BIT_S => 4;
+use constant BIT_H => 5;
+use constant BIT_T => 6;
+use constant BIT_I => 7;
 
 use constant TIMSK1 => 0x6f;
 use constant ICIE1 => 5;

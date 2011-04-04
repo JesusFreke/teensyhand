@@ -13,6 +13,9 @@ BEGIN {
     emit ".text\n";
 }
 
+do "descriptors.pm";
+die $@ if ($@);
+
 do "usb.pm";
 die $@ if ($@);
 
@@ -27,9 +30,9 @@ emit_global_sub "main", sub {
     #initialize register with commonly used "zero" value
     _clr r15_zero;
 
-    #usb_init();
+    usb_init();
 
-    timer1_init();
+    #timer1_init();
 
     #enable interrupts
     _sei;
