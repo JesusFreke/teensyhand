@@ -218,9 +218,9 @@ emit_sub "eor_int", sub {
 
                 #otherwise, unsupported
                 emit "setup_get_descriptor_end:\n";
-                indent;
+                indent_block {
                     _ret;
-                deindent;
+                };
 
                 emit_sub "setup_get_device_descriptor", sub {
                     #if more than 255 bytes are requested, round down to 255

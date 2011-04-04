@@ -94,6 +94,14 @@ BEGIN {
     use constant r15_zero => "r15";
 }
 
+sub indent_block(&) {
+    my($block) = shift;
+
+    $emit::indent+=4;
+    &$block();
+    $emit::indent-=4;
+}
+
 sub indent {
     $emit::indent+=4;
 }
@@ -125,9 +133,9 @@ sub emit_sub {
     emit_blank_line;
     emit ".global $name\n" if $global;
     emit "$name:\n";
-    indent();
-    &$block();
-    deindent();
+    indent_block {
+        &$block();
+    };
     emit_blank_line;
 }
 
@@ -145,9 +153,9 @@ sub do_while(&&) {
 
     emit_blank_line;
     emit "$label:\n";
-    indent();
-    &$block();
-    deindent();
+    indent_block {
+        &$block();
+    };
     &$branch_insn(@_, $label);
     emit_blank_line;
 }
@@ -199,12 +207,12 @@ sub jump_table {
 
     emit_blank_line;
     emit "$table_label:\n";
-    indent;
-    foreach my $item (@$table) {
-        _rjmp $item;
+    indent_block {
+        foreach my $item (@$table) {
+            _rjmp $item;
+        };
+        emit "$invalid_label:\n" if ($emit_end_label);
     };
-    emit "$invalid_label:\n" if ($emit_end_label);
-    deindent;
     emit_blank_line;
 }
 
@@ -217,9 +225,9 @@ sub forward_branch {
     $forward_branch_counter++;
 
     &$branch_insn(@_, $label);
-    indent;
-    &$block();
-    deindent;
+    indent_block {
+        &$block();
+    };
     emit_blank_line;
     emit "$label:\n"
 }
@@ -250,9 +258,9 @@ sub _if_bit {
     &$insn($address, $bit);
     _rjmp $label;
 
-    indent();
-    &$block();
-    deindent();
+    indent_block {
+        &$block();
+    };
     emit_blank_line;
     emit("$label:\n");
 }

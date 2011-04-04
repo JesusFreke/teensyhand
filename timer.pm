@@ -43,8 +43,7 @@ emit_global_sub "t1_int", sub {
         _reti;
     };
     #else
-    indent();
-    {
+    indent_block {
         _sbi IO(PORTD), 6;
 
 #         SELECT_EP r16, 1;
@@ -70,6 +69,5 @@ emit_global_sub "t1_int", sub {
 #         _sts UEINTX, r16;
 
         _reti;
-    }
-    deindent();
+    };
 }
