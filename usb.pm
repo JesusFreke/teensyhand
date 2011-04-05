@@ -17,10 +17,11 @@ sub usb_init {
     _ldi r16, PLL_8 | MASK(PLLE);
     _sts PLLCSR, r16;
 
-    do_while {
+    block {
         _lds r16, PLLCSR;
         _bst r16, PLOCK;
-    } \&_brtc;
+        _brtc begin_label;
+    };
 
     #enable VBUS pad
     _ldi r16, MASK(USBE) | MASK(OTGPADE);
@@ -38,10 +39,11 @@ sub usb_init {
 sub USB_WAIT_FOR_TXINI {
     my($tempreg) = shift;
 
-    do_while {
+    block {
         _lds $tempreg, UEINTX;
         _sbrs $tempreg, TXINI;
-    } \&_rjmp;
+        _rjmp begin_label;
+    };
 }
 
 sub USB_SEND_QUEUED_DATA {
@@ -103,7 +105,10 @@ emit_sub "eor_int", sub {
         _lds r0, UEINT;
 
         #check EP0
-        if_bit_set r0, EPINT0, sub {
+        block {
+            _sbrs r0, EPINT0;
+            _rjmp end_label;
+
             SELECT_EP r16, EP_0;
 
             #setup max_packet_length shared register
@@ -196,8 +201,10 @@ emit_sub "eor_int", sub {
 
             emit_sub "setup_get_descriptor", sub {
                 #check for normal descriptor request
-                _cpi $r16_bmRequestType, 0b10000000;
-                forward_branch \&_brne, sub {
+                block {
+                    _cpi $r16_bmRequestType, 0b10000000;
+                    _brne end_label;
+
                     jump_table(value=>$r19_wValue_hi, initial_index=>0, invalid_value_label=>"setup_get_descriptor_end", table=>[
                         "setup_get_descriptor_end",                         #0x00
                         "setup_get_device_descriptor",                      #0x01
@@ -236,8 +243,9 @@ emit_sub "eor_int", sub {
                     _ldi zh, hi8("DEVICE_DESCRIPTOR");
 
                     #check if the requested number of bytes is less than the descriptor length
-                    _cpi $r22_wLength_lo, 0x12;
-                    forward_branch \&_brlo, sub {
+                    block {
+                        _cpi $r22_wLength_lo, 0x12;
+                        _brlo end_label;
                         _ldi $r22_wLength_lo, 0x12;
                     };
 
@@ -309,13 +317,15 @@ emit_sub "eor_int", sub {
         my($r23_current_packet_len) = "r23";
         my($r24_temp_reg) = "r24";
 
-        do_while(sub {
+        block {
             #load the size of the next packet into r23
             _mov $r23_current_packet_len, $r10_max_packet_length;
-            _cp $r23_current_packet_len, $r22_data_len;
 
             #if data_len <= current_packet_len
-            forward_branch \&_brlo, sub {
+            block {
+                _cp $r23_current_packet_len, $r22_data_len;
+                _brlo end_label;
+
                 _mov $r23_current_packet_len, $r22_data_len;
             };
 
@@ -323,29 +333,26 @@ emit_sub "eor_int", sub {
             USB_WAIT_FOR_TXINI r24;
 
             #queue the data for the next packet
-            do_while {
+            block {
                 _lpm $r24_temp_reg, "z+";
                 _sts UEDATX, $r24_temp_reg;
                 _dec r23;
-            } \&_brne;
+                _brne begin_label;
+            };
 
             #send the data
             USB_SEND_QUEUED_DATA $r24_temp_reg;
 
             _sub $r22_data_len, $r10_max_packet_length;
 
-        }, sub {
             #if z is set, we are done sending data, and need to send a zlp
             #if c is set, we are done sending data, and don't need to send a zlp
             #if neither of the above, we have more data to send
 
-            my($loop_begin_label) = shift;
-
-            forward_branch(sub { _brbs BIT_C, $_[0]; }, sub {
-                _brbc BIT_Z, $loop_begin_label;
-                USB_SEND_ZLP r24;
-            });
-        });
+            _brbs BIT_C, end_label;
+            _brbc BIT_Z, begin_label;
+            USB_SEND_ZLP r24;
+        };
 
         _ret;
     };

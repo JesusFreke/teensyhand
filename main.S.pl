@@ -37,5 +37,7 @@ emit_global_sub "main", sub {
     #enable interrupts
     _sei;
 
-    do_while {} \&_rjmp;
+    block {
+        _rjmp begin_label;
+    };
 }

@@ -19,7 +19,10 @@ sub timer1_init {
 }
 
 emit_global_sub "t1_int", sub {
-    if_bit_set IO(PORTD), 6, sub {
+    block {
+        _sbis IO(PORTD), 6;
+        _rjmp end_label;
+
         _cbi IO(PORTD), 6;
 
 #         SELECT_EP r16, 1;

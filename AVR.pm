@@ -143,21 +143,53 @@ sub emit_global_sub {
     emit_sub @_, 1;
 }
 
-my($do_while_counter) = 0;
-sub do_while(&&) {
-    my($block) = shift || die "no code block";
-    my($branch_insn) = shift || die "no branch instruction";
+my(@block_stack);
+my($block_counter) = 0;
+sub block(&) {
+    my($block) = shift;
 
-    my($label) = "do_while_$do_while_counter";
-    $do_while_counter++;
+    my($begin_label) = "block_begin_$block_counter";
+    my($end_label) = "block_end_$block_counter";
+    $block_counter++;
 
+    push @block_stack, [$begin_label, $end_label];
     emit_blank_line;
-    emit "$label:\n";
+    emit "$begin_label:\n";
     indent_block {
         &$block();
     };
-    &$branch_insn(@_, $label);
+    emit "$end_label:\n";
     emit_blank_line;
+    pop @block_stack;
+}
+
+#returns the block level of the parent of the given block,
+#where block 0 is the current block, block 1 is the immediate parent
+#block 2 is the grandparent, etc.
+sub parent {
+    return (shift || 0) + 1;
+}
+
+sub begin_label {
+    my($block_level) = shift;
+
+    my($stack_size) = scalar(@block_stack);
+    if ($stack_size <= $block_level) {
+        die "requested label for nonexistent block";
+    }
+
+    return $block_stack[$stack_size - $block_level - 1]->[0];
+}
+
+sub end_label {
+    my($block_level) = shift;
+
+    my($stack_size) = scalar(@block_stack);
+    if ($stack_size <= $block_level) {
+        die "requested label for nonexistent block";
+    }
+
+    return $block_stack[$stack_size - $block_level - 1]->[1];
 }
 
 my($jump_table_counter) = 0;
@@ -214,63 +246,6 @@ sub jump_table {
         emit "$invalid_label:\n" if ($emit_end_label);
     };
     emit_blank_line;
-}
-
-my($forward_branch_counter) = 0;
-sub forward_branch {
-    my($branch_insn) = shift || die "no branch instruction given";
-    my($block) = shift || die "no code block given";
-
-    my($label) = "forward_branch_$forward_branch_counter";
-    $forward_branch_counter++;
-
-    &$branch_insn(@_, $label);
-    indent_block {
-        &$block();
-    };
-    emit_blank_line;
-    emit "$label:\n"
-}
-
-my($bit_set) = 1;
-my($bit_cleared) = 2;
-
-my($if_bit_counter) = 0;
-sub _if_bit {
-    my($set) = shift;
-    my($address) = shift;
-    my($bit) = shift;
-    my($block) = shift;
-
-    my($insn);
-
-    if ($address =~ /^r[0-9]+$/) {
-        $insn = $set?\&_sbrs:\&_sbrc;
-    } else {
-        die "invalid address specified - $address" if ($address < 0 || $address > 0x1f);
-        $insn = $set?\&_sbis:\&_sbic;
-    }
-
-    my($label) = "if_bit_$if_bit_counter";
-    $if_bit_counter++;
-
-    emit_blank_line;
-    &$insn($address, $bit);
-    _rjmp $label;
-
-    indent_block {
-        &$block();
-    };
-    emit_blank_line;
-    emit("$label:\n");
-}
-
-sub if_bit_set {
-    _if_bit($bit_set, @_);
-}
-
-sub if_bit_cleared {
-    _if_bit($bit_cleared, @_);
 }
 
 use constant CLOCK_DIV_1 =>     0b0000;
