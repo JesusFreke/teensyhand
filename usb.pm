@@ -317,7 +317,7 @@ emit_sub "eor_int", sub {
     emit_sub "usb_stall", sub {
         _lds r16, UECONX;
         _sbr r16, MASK(STALLRQ);
-        _sts UECONX, r0;
+        _sts UECONX, r16;
 
         emit_sub "usb_send_zlp", sub {
             USB_SEND_ZLP r24;
