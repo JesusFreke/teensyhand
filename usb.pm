@@ -115,12 +115,9 @@ emit_sub "eor_int", sub {
             _ldi r16, 0x40;
             _mov $r10_max_packet_length, r16;
 
-            _call "handle_setup_packet";
-            _reti;
+            _rjmp "handle_setup_packet";
         };
-
-        _call "usb_stall";
-        _reti;
+        _rjmp "usb_stall";
 
         emit_sub "handle_setup_packet", sub {
             #check if we got an interrupt for a setup packet
@@ -219,7 +216,7 @@ emit_sub "eor_int", sub {
                     _sbr $r18_wValue_lo, MASK(ADDEN);
                     _sts UDADDR, $r18_wValue_lo;
 
-                    _ret;
+                    _reti;
                 };
                 _sbi IO(PORTD), 6;
                 _rjmp "usb_stall";
@@ -265,7 +262,7 @@ emit_sub "eor_int", sub {
                         _ldi $r22_wLength_lo, $descriptor->{size};
                     };
 
-                    _rjmp "usb_send_data_short"; #tail call
+                    _rjmp "usb_send_data_short";
                 };
 
                 emit_sub "setup_get_configuration_descriptor", sub {
@@ -280,7 +277,7 @@ emit_sub "eor_int", sub {
                         _ldi $r22_wLength_lo, $descriptor->{size};
                     };
 
-                    _rjmp "usb_send_data_short"; #tail call
+                    _rjmp "usb_send_data_short";
                 };
 
                 emit_sub "setup_get_string_descriptor", sub {
@@ -318,11 +315,12 @@ emit_sub "eor_int", sub {
         _lds r16, UECONX;
         _sbr r16, MASK(STALLRQ);
         _sts UECONX, r16;
+        _reti;
+    };
 
-        emit_sub "usb_send_zlp", sub {
-            USB_SEND_ZLP r24;
-            _ret;
-        };
+    emit_sub "usb_send_zlp", sub {
+        USB_SEND_ZLP r24;
+        _reti;
     };
 
     #Sends up to 255 bytes to the currently selected usb endpoint
@@ -372,6 +370,6 @@ emit_sub "eor_int", sub {
             USB_SEND_ZLP r24;
         };
 
-        _ret;
+        _reti;
     };
 }
