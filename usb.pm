@@ -389,7 +389,21 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "hid_get_report", sub {
-                _rjmp "usb_stall";
+                #TODO: we should return the actual current input state here
+                #For now, we'll just return a blank report
+                USB_WAIT_FOR_TXINI r24;
+                _clr r17;
+                _ldi r16, 21;
+
+                block {
+                    _sts UEDATX, r17;
+                    _dec r16;
+                    _brne begin_label;
+                };
+
+                #send the data
+                USB_SEND_QUEUED_DATA r16;
+                _reti;
             };
 
             emit_sub "hid_get_idle", sub {
