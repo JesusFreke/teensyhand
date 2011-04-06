@@ -179,7 +179,20 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "handle_hid_packet", sub {
-                _rjmp "usb_stall";
+                jump_table(value=>$r17_bRequest, initial_index=>0, invalid_value_label=>"setup_unknown", table=>[
+                    "setup_unknown",        #0x00
+                    "hid_get_report",       #0x01
+                    "hid_get_idle",         #0x02
+                    "hid_get_protocol",     #0x03
+                    "setup_unknown",        #0x04
+                    "setup_unknown",        #0x05
+                    "setup_unknown",        #0x06
+                    "setup_unknown",        #0x07
+                    "setup_unknown",        #0x08
+                    "hid_set_report",       #0x09
+                    "hid_set_idle",         #0x0a
+                    "hid_set_protocol"      #0x0b
+                ]);
             };
 
             emit_sub "setup_get_status", sub {
@@ -372,6 +385,31 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "setup_synch_frame", sub {
+                _rjmp "usb_stall";
+            };
+
+            emit_sub "hid_get_report", sub {
+                _rjmp "usb_stall";
+            };
+
+            emit_sub "hid_get_idle", sub {
+                _rjmp "usb_stall";
+            };
+
+            emit_sub "hid_get_protocol", sub {
+                _rjmp "usb_stall";
+            };
+
+            emit_sub "hid_set_report", sub {
+                _rjmp "usb_stall";
+            };
+
+            emit_sub "hid_set_idle", sub {
+                _sts hid_idle_period, $r19_wValue_hi;
+                _rjmp "usb_send_zlp";
+            };
+
+            emit_sub "hid_set_protocol", sub {
                 _rjmp "usb_stall";
             };
         };
