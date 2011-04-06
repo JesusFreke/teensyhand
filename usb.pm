@@ -196,6 +196,30 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "setup_set_address", sub {
+                block {
+                    _cpi $r16_bmRequestType, 0b00000000;
+                    _brne end_label;
+
+                    _cpi $r19_wValue_hi, 0;
+                    _brne end_label;
+
+                    _cpi $r18_wValue_lo, 0x80;
+                    _brsh end_label;
+
+                    #store the new address, but don't enable it yet
+                    _sts UDADDR, $r18_wValue_lo;
+
+                    USB_SEND_ZLP r24;
+
+                    USB_WAIT_FOR_TXINI r24;
+
+                    #enable the new address
+                    _sbr $r18_wValue_lo, MASK(ADDEN);
+                    _sts UDADDR, $r18_wValue_lo;
+
+                    _ret;
+                };
+                _sbi IO(PORTD), 6;
                 _rjmp "usb_stall";
             };
 

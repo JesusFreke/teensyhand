@@ -331,6 +331,9 @@ use constant EORSTE => 3;
 use constant SOFE => 2;
 use constant SUSPE => 0;
 
+use constant UDADDR => 0xe3;
+use constant ADDEN => 7;
+
 use constant UEINTX => 0xe8;
 use constant FIFOCON => 7;
 use constant NAKINI => 6;
