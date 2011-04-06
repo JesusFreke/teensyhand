@@ -173,6 +173,58 @@ sub descriptor {
 	};
 }
 
+sub string_descriptors {
+    my($langid) = shift;
+    my(@strings) = @_;
+
+    sub {
+        if ($mode == SIZE) {
+            my($size) = 0;
+            $size += 4 + 2; #for the string 0 descriptor, and for the string table entry
+            foreach my $string (@strings) {
+                $size += length($string) * 2 + 2; #descriptor length
+                $size += 2; #string table entry
+            }
+
+            $descriptors{"STRING_DESCRIPTOR_TABLE"} = {
+                name => "STRING_DESCRIPTOR_TABLE",
+                size => $size,
+                count => scalar(@strings) + 1
+            };
+
+            #Just return the size, we don't currently need to add an entry in %descriptors.
+            return $size;
+        } else {
+            #The string descriptor table will contain the 2-byte address for each string
+            emit "STRING_DESCRIPTOR_TABLE:\n";
+            indent_block {
+                for (my($i)=0; $i<=scalar(@strings); $i++) {
+                    emit ".word STRING_DESCRIPTOR_$i\n";
+                }
+            };
+
+            #now write out the descriptors themselves
+            emit "STRING_DESCRIPTOR_0:\n";
+            indent_block {
+                emit ".byte 4\n";
+                emit ".byte " . DESC_STRING . "\n";
+                emit ".word $langid\n";
+            };
+            my($i) = 1;
+            foreach my $string (@strings) {
+                emit "STRING_DESCRIPTOR_$i:\n";
+                indent_block {
+                    emit ".byte " . (length($string) * 2 + 2) . "\n";
+                    emit ".byte " . DESC_STRING . "\n";
+                    my(@chars) = unpack("C*", $string);
+                    emit ".word " . join(", ", map { "'" . chr($_) . "'" } @chars) . "\n";
+                };
+                $i++;
+            }
+        }
+    }
+}
+
 sub process_descriptor {
 	my($descriptor_def) = shift;
 
@@ -313,5 +365,19 @@ descriptor("DESCRIPTORS",
 
         #End application collection
         byte(HID_ITEM_DATA_SIZE_0 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_END_COLLECTION)
+    ),
+    string_descriptors(
+        #Supported lang id
+        0x0409,
+        #Manufacturer
+        "JesusFreke",
+        #Product
+        "DataHand",
+        #Serial Number
+        "3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938",
+        #Configuration Name
+        "The Configuration of DOOOOOOOOM",
+        #Interface Name
+        "Keyboard Interface"
     )
 );

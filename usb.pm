@@ -281,6 +281,35 @@ emit_sub "eor_int", sub {
                 };
 
                 emit_sub "setup_get_string_descriptor", sub {
+                     block {
+                        my($descriptor) = get_descriptor("STRING_DESCRIPTOR_TABLE");
+                         _cpi $r18_wValue_lo, $descriptor->{count};
+                         _brsh end_label;
+
+                        _ldi zl, lo8($descriptor->{name});
+                        _ldi zh, hi8($descriptor->{name});
+                        _lsl $r18_wValue_lo;
+                        _add zl, $r18_wValue_lo;
+                        _add zh, r15_zero;
+
+                        #load the address of the string descriptor
+                        _lpm r24, "z+";
+                        _lpm r25, "z";
+                        _mov zl, r24;
+                        _mov zh, r25;
+
+                        #load the descriptor length
+                        _lpm r23, "z";
+
+                        #check if the requested number of bytes is less than the descriptor length
+                        block {
+                            _cp $r22_wLength_lo, r23;
+                            _brlo end_label;
+                            _mov $r22_wLength_lo, r23;
+                        };
+
+                        _rjmp "usb_send_data_short";
+                    };
                     _rjmp "usb_stall";
                 };
             };

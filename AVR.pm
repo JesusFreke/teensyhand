@@ -52,6 +52,7 @@ BEGIN {
         "ldi",
         "lds",
         "lpm",
+        "lsl",
         "mov",
         "ret",
         "reti",
