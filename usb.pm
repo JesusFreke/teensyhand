@@ -118,13 +118,13 @@ emit_sub "eor_int", sub {
             _call "handle_setup_packet";
         };
 
-        _reti;
+        _rjmp "usb_stall";
 
         emit_sub "handle_setup_packet", sub {
             #check if we got an interrupt for a setup packet
             _lds r24, UEINTX;
             _sbrs r24, RXSTPI;
-                _ret;
+                _rjmp "usb_stall";
 
             #setup some local register aliases, for clarity
             my($r16_bmRequestType) = "r16";
@@ -156,7 +156,7 @@ emit_sub "eor_int", sub {
 
             #is it a vendor request?
             _sbrc $r16_bmRequestType, 6;
-            _rjmp "setup_unknown";
+            _rjmp "usb_stall";
 
             jump_table(value=>$r17_bRequest, initial_index=>0, invalid_value_label=>"setup_unknown", table=>[
                 "setup_get_status",         #0x00
@@ -176,27 +176,27 @@ emit_sub "eor_int", sub {
 
 
             emit_sub "setup_unknown", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "handle_hid_packet", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_get_status", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_clear_feature", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_set_feature", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_set_address", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_get_descriptor", sub {
@@ -225,9 +225,7 @@ emit_sub "eor_int", sub {
 
                 #otherwise, unsupported
                 emit "setup_get_descriptor_end:\n";
-                indent_block {
-                    _ret;
-                };
+                    _rjmp "usb_stall";
 
                 emit_sub "setup_get_device_descriptor", sub {
                     my($descriptor) = get_descriptor("DEVICE_DESCRIPTOR");
@@ -260,34 +258,40 @@ emit_sub "eor_int", sub {
                 };
 
                 emit_sub "setup_get_string_descriptor", sub {
-                    _ret;
+                    _rjmp "usb_stall";
                 };
             };
 
             emit_sub "setup_set_descriptor", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_get_configuration", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_set_configuration", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_get_interface", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_set_interface", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_synch_frame", sub {
-                _ret;
+                _rjmp "usb_stall";
             };
         };
+    };
+
+    emit_sub "usb_stall", sub {
+        _lds r16, UECONX;
+        _sbr r16, MASK(STALLRQ);
+        _sts UECONX, r0;
     };
 
     #Sends up to 255 bytes to the currently selected usb endpoint

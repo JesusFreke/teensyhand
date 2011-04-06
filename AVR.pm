@@ -60,6 +60,7 @@ BEGIN {
         "sbic",
         "sbis",
         "sbiw",
+        "sbr",
         "sbrc",
         "sbrs",
         "sei",
