@@ -323,7 +323,25 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "setup_set_configuration", sub {
-                _rjmp "usb_stall";
+                _sts current_configuration, $r18_wValue_lo;
+
+                SELECT_EP r16, EP_1;
+
+                #enable ep1
+                _ldi r16, MASK(EPEN);
+                _sts UECONX, r16;
+
+                #configure ep1
+                _ldi r16, EPTYPE_INT | EPDIR_IN;
+                _sts UECFG0X, r16;
+
+                _ldi r16, EPSIZE_32 | EPBANK_SINGLE | MASK(ALLOC);
+                _sts UECFG1X, r16;
+
+                #re-select ep0
+                SELECT_EP r16, EP_0;
+
+                _rjmp "usb_send_zlp";
             };
 
             emit_sub "setup_get_interface", sub {
