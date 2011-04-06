@@ -242,9 +242,13 @@ emit_sub "eor_int", sub {
                 };
 
                 #check for HID class descriptor request
-                #_cpi $r16_bmRequestType, 0b10000001;
-                #forward_branch \&_brne, sub {
-                #};
+                block {
+                    _cpi $r16_bmRequestType, 0b10000001;
+                    _brne end_label;
+
+                    _cpi $r19_wValue_hi, DESC_HID_REPORT;
+                    _breq "setup_get_hid_report_descriptor";
+                };
 
                 #otherwise, unsupported
                 emit "setup_get_descriptor_end:\n";
@@ -312,6 +316,21 @@ emit_sub "eor_int", sub {
                     };
                     _rjmp "usb_stall";
                 };
+
+                emit_sub "setup_get_hid_report_descriptor", sub {
+                    my($descriptor) = get_descriptor("REPORT_DESCRIPTOR");
+                    _ldi zl, lo8($descriptor->{name});
+                    _ldi zh, hi8($descriptor->{name});
+
+                    #check if the requested number of bytes is less than the descriptor length
+                    block {
+                        _cpi $r22_wLength_lo, $descriptor->{size};
+                        _brlo end_label;
+                        _ldi $r22_wLength_lo, $descriptor->{size};
+                    };
+
+                    _rjmp "usb_send_data_short";
+                }
             };
 
             emit_sub "setup_set_descriptor", sub {
