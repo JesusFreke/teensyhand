@@ -318,6 +318,11 @@ emit_sub "eor_int", sub {
         _lds r16, UECONX;
         _sbr r16, MASK(STALLRQ);
         _sts UECONX, r0;
+
+        emit_sub "usb_send_zlp", sub {
+            USB_SEND_ZLP r24;
+            _ret;
+        };
     };
 
     #Sends up to 255 bytes to the currently selected usb endpoint
