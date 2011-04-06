@@ -25,23 +25,25 @@ emit_global_sub "t1_int", sub {
 
         _cbi IO(PORTD), 6;
 
-#         SELECT_EP r16, 1;
-#
-#         do_while {
-#             _lds r16, UEINTX;
-#             _sbrs r16, RWAL;
-#         } \&_rjmp;
-#
-#         _ldi r16, 21;
-#
-#         do_while {
-#             _sts UEDATX, r15_zero;
-#             _dec r16;
-#         } \&_brne;
-#
-#         _lds r16, UEINTX;
-#         _andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI)) & 0xFF;
-#         _sts UEINTX, r16;
+        SELECT_EP r16, EP_1;
+
+        block {
+            _lds r16, UEINTX;
+            _sbrs r16, RWAL;
+            _rjmp begin_label;
+        };
+
+        _ldi r16, 21;
+
+        block {
+            _sts UEDATX, r15_zero;
+            _dec r16;
+            _brne begin_label;
+        };
+
+        _lds r16, UEINTX;
+        _andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI)) & 0xFF;
+        _sts UEINTX, r16;
 
         _reti;
     };
@@ -49,27 +51,29 @@ emit_global_sub "t1_int", sub {
     indent_block {
         _sbi IO(PORTD), 6;
 
-#         SELECT_EP r16, 1;
-#
-#         do_while {
-#             _lds r16, UEINTX;
-#             _sbrs r16, RWAL;
-#         } \&_rjmp;
-#
-#         #send an 'a'
-#         _ldi r16, 0x04;
-#         _sts UEDATX, r16;
-#
-#         _ldi r16, 20;
-#
-#         do_while {
-#             _sts UEDATX, r15_zero;
-#             _dec r16;
-#         } \&_brne;
-#
-#         _lds r16, UEINTX;
-#         _andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI)) & 0xFF;
-#         _sts UEINTX, r16;
+        SELECT_EP r16, EP_1;
+
+        block {
+            _lds r16, UEINTX;
+            _sbrs r16, RWAL;
+            _rjmp begin_label;
+        };
+
+        #send an 'a'
+        _ldi r16, 0x04;
+        _sts UEDATX, r16;
+
+        _ldi r16, 20;
+
+        block {
+            _sts UEDATX, r15_zero;
+            _dec r16;
+            _brne begin_label;
+        };
+
+        _lds r16, UEINTX;
+        _andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI)) & 0xFF;
+        _sts UEINTX, r16;
 
         _reti;
     };
