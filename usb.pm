@@ -200,6 +200,11 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "setup_get_descriptor", sub {
+                #if more than 255 bytes are requested, round down to 255
+                #(i.e. set the low byte to 255 - the high byte is otherwise ignored)
+                _cpse $r23_wLength_hi, r15_zero;
+                _ldi $r22_wLength_lo, 0xff;
+
                 #check for normal descriptor request
                 block {
                     _cpi $r16_bmRequestType, 0b10000000;
@@ -210,11 +215,6 @@ emit_sub "eor_int", sub {
                         "setup_get_device_descriptor",                      #0x01
                         "setup_get_configuration_descriptor",               #0x02
                         "setup_get_string_descriptor",                      #0x03
-                        "setup_get_interface_descriptor",                   #0x04
-                        "setup_get_endpoint_descriptor",                    #0x05
-                        "setup_get_device_qualifier_descriptor",            #0x06
-                        "setup_get_other_speed_configuration_descriptor",   #0x07
-                        "setup_get_interface_power_descriptor"              #0x08
                     ]);
                 };
 
@@ -230,53 +230,36 @@ emit_sub "eor_int", sub {
                 };
 
                 emit_sub "setup_get_device_descriptor", sub {
-                    #if more than 255 bytes are requested, round down to 255
-                    #(i.e. set the low byte to 255 - the high byte is otherwise ignored)
-                    _cpse $r23_wLength_hi, r15_zero;
-                    _ldi $r22_wLength_lo, 0xff;
-
-                    #TODO: do we need to send a zlp if 0 bytes are requested?
-                    _cpi $r22_wLength_lo, 0;
-                    _breq "setup_get_descriptor_end";
-
-                    _ldi zl, lo8("DEVICE_DESCRIPTOR");
-                    _ldi zh, hi8("DEVICE_DESCRIPTOR");
+                    my($descriptor) = get_descriptor("DEVICE_DESCRIPTOR");
+                    _ldi zl, lo8($descriptor->{name});
+                    _ldi zh, hi8($descriptor->{name});
 
                     #check if the requested number of bytes is less than the descriptor length
                     block {
-                        _cpi $r22_wLength_lo, 0x12;
+                        _cpi $r22_wLength_lo, $descriptor->{size};
                         _brlo end_label;
-                        _ldi $r22_wLength_lo, 0x12;
+                        _ldi $r22_wLength_lo, $descriptor->{size};
                     };
 
                     _rjmp "usb_send_data_short"; #tail call
                 };
 
                 emit_sub "setup_get_configuration_descriptor", sub {
-                    _ret;
+                    my($descriptor) = get_descriptor("CONFIGURATION_DESCRIPTORS");
+                    _ldi zl, lo8($descriptor->{name});
+                    _ldi zh, hi8($descriptor->{name});
+
+                    #check if the requested number of bytes is less than the descriptor length
+                    block {
+                        _cpi $r22_wLength_lo, $descriptor->{size};
+                        _brlo end_label;
+                        _ldi $r22_wLength_lo, $descriptor->{size};
+                    };
+
+                    _rjmp "usb_send_data_short"; #tail call
                 };
 
                 emit_sub "setup_get_string_descriptor", sub {
-                    _ret;
-                };
-
-                emit_sub "setup_get_interface_descriptor", sub {
-                    _ret;
-                };
-
-                emit_sub "setup_get_endpoint_descriptor", sub {
-                    _ret;
-                };
-
-                emit_sub "setup_get_device_qualifier_descriptor", sub {
-                    _ret;
-                };
-
-                emit_sub "setup_get_other_speed_configuration_descriptor", sub {
-                    _ret;
-                };
-
-                emit_sub "setup_get_interface_power_descriptor", sub {
                     _ret;
                 };
             };
