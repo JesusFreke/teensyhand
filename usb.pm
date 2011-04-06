@@ -116,9 +116,11 @@ emit_sub "eor_int", sub {
             _mov $r10_max_packet_length, r16;
 
             _call "handle_setup_packet";
+            _reti;
         };
 
-        _rjmp "usb_stall";
+        _call "usb_stall";
+        _reti;
 
         emit_sub "handle_setup_packet", sub {
             #check if we got an interrupt for a setup packet
