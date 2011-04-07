@@ -351,7 +351,18 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "setup_get_configuration", sub {
-                _rjmp "usb_stall";
+                block {
+                    USB_WAIT_FOR_TXINI r24;
+
+                    _cpi $r22_wLength_lo, 0;
+                    _breq end_label;
+
+                    _lds r16, current_configuration;
+                    _sts UEDATX, r16;
+                };
+
+                USB_SEND_QUEUED_DATA r16;
+                _reti;
             };
 
             emit_sub "setup_set_configuration", sub {
