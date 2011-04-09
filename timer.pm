@@ -117,19 +117,22 @@ emit_global_sub "t3_int", sub {
                 _bst $r16_button_states, $i;
                 _bld r19, 7;
 
-                _ldi zl, lo8(button_event_queue);
                 _ldi zh, hi8(button_event_queue);
 
-                _lds r20, button_event_count;
-                _cpi r20, 0x20;
-                _brsh end_label;
+                #grab the tail and head, and make sure there's room in the queue
+                _lds zl, button_event_tail;
+                _lds r20, button_event_head;
+                _dec r20;
 
-                _add zl, r20;
-                _adc zh, r15_zero;
+                block {
+                    #if there is no more room in the queue, bail out
+                    _cp zl, r20;
+                    _brne end_label;
+                    _rjmp end_label parent;
+                };
 
-                _st "z", r19;
-                _inc r20;
-                _sts button_event_count, r20;
+                _st "z+", r19;
+                _sts button_event_tail, zl;
             };
         }
     };
