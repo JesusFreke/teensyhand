@@ -63,6 +63,8 @@ sub USB_SEND_ZLP {
 }
 
 emit_global_sub "usb_gen", sub {
+    _push r16;
+
     #check for End of Reset interrupt
     _lds r16, UDINT;
     _sbrc r16, EORSTI;
@@ -72,6 +74,7 @@ emit_global_sub "usb_gen", sub {
     _ldi r16, 0;
     _sts UDINT, r16;
 
+    _pop r16;
     _reti;
 };
 
@@ -101,12 +104,25 @@ emit_sub "eor_int", sub {
     my($r10_max_packet_length) = "r10";
 
     emit_global_sub "usb_enp", sub {
+        _push r16;
+        _push r17;
+        _push r18;
+        _push r19;
+        _push r20;
+        _push r21;
+        _push r22;
+        _push r23;
+        _push r24;
+        _push r25;
+        _push zl;
+        _push zh;
+
         #check for endpoints with interrupts
-        _lds r0, UEINT;
+        _lds r16, UEINT;
 
         #check EP0
         block {
-            _sbrs r0, EPINT0;
+            _sbrs r16, EPINT0;
             _rjmp end_label;
 
             SELECT_EP r16, EP_0;
@@ -118,6 +134,22 @@ emit_sub "eor_int", sub {
             _rjmp "handle_setup_packet";
         };
         _rjmp "usb_stall";
+
+        emit_sub "usb_enp_end", sub {
+            _pop zh;
+            _pop zl;
+            _pop r25;
+            _pop r24;
+            _pop r23;
+            _pop r22;
+            _pop r21;
+            _pop r20;
+            _pop r19;
+            _pop r18;
+            _pop r17;
+            _pop r16;
+            _reti;
+        };
 
         emit_sub "handle_setup_packet", sub {
             #check if we got an interrupt for a setup packet
@@ -237,7 +269,7 @@ emit_sub "eor_int", sub {
                     _sbr $r18_wValue_lo, MASK(ADDEN);
                     _sts UDADDR, $r18_wValue_lo;
 
-                    _reti;
+                    _rjmp "usb_enp_end";
                 };
                 _sbi IO(PORTD), 6;
                 _rjmp "usb_stall";
@@ -370,7 +402,7 @@ emit_sub "eor_int", sub {
                 };
 
                 USB_SEND_QUEUED_DATA r16;
-                _reti;
+                _rjmp "usb_enp_end";
             };
 
             emit_sub "setup_set_configuration", sub {
@@ -422,7 +454,7 @@ emit_sub "eor_int", sub {
 
                 #send the data
                 USB_SEND_QUEUED_DATA r16;
-                _reti;
+                _rjmp "usb_enp_end";
             };
 
             emit_sub "hid_get_idle", sub {
@@ -437,7 +469,7 @@ emit_sub "eor_int", sub {
                 };
 
                 USB_SEND_QUEUED_DATA r16;
-                _reti;
+                _rjmp "usb_enp_end";
             };
 
             emit_sub "hid_get_protocol", sub {
@@ -477,7 +509,7 @@ emit_sub "eor_int", sub {
 
                     _rjmp "usb_send_memory_data_short";
                 };
-                _reti;
+                _rjmp "usb_enp_end";
             };
         };
     };
@@ -486,12 +518,12 @@ emit_sub "eor_int", sub {
         _lds r16, UECONX;
         _sbr r16, MASK(STALLRQ);
         _sts UECONX, r16;
-        _reti;
+        _rjmp "usb_enp_end";
     };
 
     emit_sub "usb_send_zlp", sub {
         USB_SEND_ZLP r24;
-        _reti;
+        _rjmp "usb_enp_end";
     };
 
     #Sends up to 255 bytes of program memory to the currently selected usb endpoint
@@ -541,7 +573,7 @@ emit_sub "eor_int", sub {
             USB_SEND_ZLP r24;
         };
 
-        _reti;
+        _rjmp "usb_enp_end";
     };
 
     #Sends up to 255 bytes of data memory to the currently selected usb endpoint
@@ -591,6 +623,6 @@ emit_sub "eor_int", sub {
             USB_SEND_ZLP r24;
         };
 
-        _reti;
+        _rjmp "usb_enp_end";
     };
 }

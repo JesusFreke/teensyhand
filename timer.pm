@@ -32,6 +32,14 @@ sub disable_timer3 {
 }
 
 emit_global_sub "t3_int", sub {
+    _push r16;
+    _push r17;
+    _push r18;
+    _push r19;
+    _push r20;
+    _push zl;
+    _push zh;
+
     disable_timer3;
 
     my($r16_button_states) = "r16";
@@ -79,7 +87,7 @@ emit_global_sub "t3_int", sub {
         _eor r18, $r16_button_states;
         block {
             _brne end_label;
-            _reti;
+            _rjmp end_label parent;
         };
 
         #we have at least 1 event, iterate through the 4 bits and add any events
@@ -126,6 +134,13 @@ emit_global_sub "t3_int", sub {
         }
     };
 
+    _pop zh;
+    _pop zl;
+    _pop r20;
+    _pop r19;
+    _pop r18;
+    _pop r17;
+    _pop r16;
     _reti;
 };
 
@@ -149,62 +164,68 @@ sub timer1_init {
 }
 
 emit_global_sub "t1_int", sub {
+    _push r16;
+
     block {
-        _sbis IO(PORTD), 6;
-        _rjmp end_label;
-
-        _cbi IO(PORTD), 6;
-
-        SELECT_EP r16, EP_1;
-
+        #if led is on
         block {
+            _sbis IO(PORTD), 6;
+            _rjmp end_label;
+
+            _cbi IO(PORTD), 6;
+
+            SELECT_EP r16, EP_1;
+
+            block {
+                _lds r16, UEINTX;
+                _sbrs r16, RWAL;
+                _rjmp begin_label;
+            };
+
+            _ldi r16, 21;
+
+            block {
+                _sts UEDATX, r15_zero;
+                _dec r16;
+                _brne begin_label;
+            };
+
             _lds r16, UEINTX;
-            _sbrs r16, RWAL;
-            _rjmp begin_label;
+            _andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI)) & 0xFF;
+            _sts UEINTX, r16;
+
+            _rjmp end_label parent;
         };
+        #else
+        indent_block {
+            _sbi IO(PORTD), 6;
 
-        _ldi r16, 21;
+            SELECT_EP r16, EP_1;
 
-        block {
-            _sts UEDATX, r15_zero;
-            _dec r16;
-            _brne begin_label;
-        };
+            block {
+                _lds r16, UEINTX;
+                _sbrs r16, RWAL;
+                _rjmp begin_label;
+            };
 
-        _lds r16, UEINTX;
-        _andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI)) & 0xFF;
-        _sts UEINTX, r16;
+            #send an 'a'
+            _ldi r16, 0x04;
+            _sts UEDATX, r16;
 
-        _reti;
-    };
-    #else
-    indent_block {
-        _sbi IO(PORTD), 6;
+            _ldi r16, 20;
 
-        SELECT_EP r16, EP_1;
+            block {
+                _sts UEDATX, r15_zero;
+                _dec r16;
+                _brne begin_label;
+            };
 
-        block {
             _lds r16, UEINTX;
-            _sbrs r16, RWAL;
-            _rjmp begin_label;
+            _andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI)) & 0xFF;
+            _sts UEINTX, r16;
         };
-
-        #send an 'a'
-        _ldi r16, 0x04;
-        _sts UEDATX, r16;
-
-        _ldi r16, 20;
-
-        block {
-            _sts UEDATX, r15_zero;
-            _dec r16;
-            _brne begin_label;
-        };
-
-        _lds r16, UEINTX;
-        _andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI)) & 0xFF;
-        _sts UEINTX, r16;
-
-        _reti;
     };
+
+    _pop r16;
+    _reti;
 }

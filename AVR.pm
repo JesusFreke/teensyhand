@@ -63,6 +63,8 @@ BEGIN {
         "mov",
         "or",
         "out",
+        "push",
+        "pop",
         "ret",
         "reti",
         "rjmp",
