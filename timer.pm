@@ -84,19 +84,20 @@ emit_global_sub "t3_int", sub {
     _reti;
 };
 
+#timer 1 is currently used for debugging
 sub timer1_init {
     #enable interrupt on timer compare match
     _ldi r16, MASK(OCIE1A);
     _sts TIMSK1, r16;
 
-    #2s delay @ 16mhz
+    #2s delay @ 16mhz (1:1024 prescalar)
     _ldi r16, 0x7A;
     _sts OCR1AH, r16;
     _ldi r16, 0x12;
     _sts OCR1AL, r16;
 
     #select CTC (clear timer on compare), which compares against the OCR1A register
-    #select clk/64
+    #select clk/1024
     #start the timer
     _ldi r16, MASK(WGM12) | TIMER_CLK_1024;
     _sts TCCR1B, r16;
