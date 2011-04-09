@@ -34,6 +34,9 @@ BEGIN {
     #The high nibbles are not used
     memory_variable "button_states", 13;
 
+    #contains the current state of the hid report
+    memory_variable "current_report", 21;
+
     emit ".text\n";
 }
 
@@ -112,7 +115,7 @@ emit_global_sub "main", sub {
     #reset all memory to 0s
     block {
         _st "z+", r15_zero;
-        
+
         _cpi zl, 0x00;
         _brne begin_label;
 
@@ -130,27 +133,286 @@ emit_global_sub "main", sub {
     #enable interrupts
     _sei;
 
+
+    _ldi yh, hi8(button_event_queue);
+
     block {
-        _ldi yh, hi8(button_states);
-        _ldi yl, lo8(button_states);
-
-        _ld r0, "Y";
-
-        for (my $i=1; $i<13; $i++) {
-            _ldd r1, "Y+$i";
-            _or r0, r1;
-        }
-
         block {
-            _breq end_label;
+            _cli;
 
-            _sts PORTC, r15_zero;
+            _lds yl, button_event_head;
+            _lds r16, button_event_tail;
+
+            block {
+                _cp yl, r16;
+                _breq end_label;
+
+                _ld r16, "y+";
+                _sts button_event_head, yl;
+                _sei;
+                _rjmp end_label parent;
+            };
+
+            _sei;
+            _rjmp begin_label;
+        };
+
+        #now we've got the input event in r16
+        _mov r17, r16;
+        _cbr r17, 0x80;
+
+        #lookup the keycode from keycode_table
+        _ldi zl, lo8("keycode_table");
+        _ldi zh, hi8("keycode_table");
+        _add zl, r17;
+        _adc zh, r15_zero;
+        _lpm r17, "z";
+
+        #check whether it's a press or release
+        block {
+            _sbrc r16, 7;
+            _rjmp end_label;
+
+            #it's a release event
+            #we need to remove the keycode from the hid report
+            _ldi zl, lo8(current_report);
+            _ldi zh, hi8(current_report);
+
+            _mov r24, zl;
+            _ldi r25, 0x20;
+            _add r24, r25;
+
+            block {
+                _cp r24, zl;
+                _breq end_label;
+
+                _ld r18, "Z+";
+
+                _cp r17, r18;
+                _brne begin_label;
+
+                _st "-Z", r15_zero;
+
+                #go and send the report
+                _rjmp "send_data";
+            };
+            #nothing to do - go back to beginning of loop
+            _rjmp begin_label parent;
+        };
+        block {
+            #it's a press event
+            #we need to find the first 0 in the hid report
+            _ldi zl, lo8(current_report);
+            _ldi zh, hi8(current_report);
+
+            _mov r24, zl;
+            _adiw r24, 0x20;
+
+            block {
+                _cp r24, zl;
+                _breq end_label;
+
+                _ld r18, "z+";
+                _cp r18, r15_zero;
+                _brne begin_label;
+
+                _st "-z", r17;
+                _rjmp end_label parent;
+            };
+            #nothing to do - go back to beginning of loop
             _rjmp begin_label parent;
         };
 
-        _clr r0;
-        _com r0;
-        _sts PORTC, r0;
+        emit "send_data:\n";
+
+        #now, we need to send the hid report
+        SELECT_EP r16, EP_1;
+
+        block {
+            _lds r16, UEINTX;
+            _sbrs r16, TXINI;
+            _rjmp begin_label;
+        };
+
+        _cbr r16, MASK(TXINI);
+        _sts UEINTX, r16;
+
+        _ldi zl, lo8(current_report);
+        _ldi zh, hi8(current_report);
+
+        _ldi r16, 21;
+
+        block {
+            _ld r17, "z+";
+            _sts UEDATX, r17;
+            _dec r16;
+            _brne begin_label;
+        };
+
+
+        _lds r16, UEINTX;
+        _cbr r16, MASK(FIFOCON);
+        _sts UEINTX, r16;
+
         _rjmp begin_label;
     };
+};
+
+emit_sub "keycode_table", sub {
+    #down, north, east, south, west
+    #1 is first (pointer) finger, 2 is second (middle) finger, etc.
+
+    sub finger_map {
+        return {
+            down=>shift,
+            north=>shift,
+            east=>shift,
+            south=>shift,
+            west=>shift
+        };
+    }
+
+    sub thumb_map {
+        return {
+            down => shift,
+            down_down => shift,
+            up => shift,
+            inside => shift,
+            lower_outside => shift,
+            upper_outside => shift
+        }
+    }
+
+    my(%normal_key_map) = (
+        r1 => finger_map("h", "g", "'", "m", "d"),
+        r2 => finger_map("t", "w", "`", "c", "f"),
+        r3 => finger_map("n", "v", "", "r", "b"),
+        r4 => finger_map("s", "z", "\\", "l", ""),
+
+        l1 => finger_map("u", "q", "i", "p", ""),
+        l2 => finger_map("e", ".", "y", "j", "`"),
+        l3 => finger_map("o", ",", "x", "k", ""),
+        l4 => finger_map("a", "/", "", ";", "")
+    );
+
+    my(@index_map) = (
+        #selector 0x00
+        ["r1", "west"],             #0x00
+        ["r1", "north"],            #0x01
+        ["l4", "west"],             #0x02
+        ["l4", "north"],            #0x03
+
+        #selector 0x01
+        ["r1", "down"],             #0x04
+        ["r1", "east"],             #0x05
+        ["l4", "down"],             #0x06
+        ["l4", "east"],             #0x07
+
+        #selector 0x02
+        ["r1", "south"],            #0x08
+        ["r2", "south"],            #0x09
+        ["l4", "south"],            #0x0a
+        ["l3", "south"],            #0x0b
+
+        #selector 0x03
+        ["r2", "west"],             #0x0c
+        ["r2", "north"],            #0x0d
+        ["l3", "west"],             #0x0e
+        ["l3", "north"],            #0x0f
+
+        #selector 0x04
+        ["r2", "down"],             #0x10
+        ["r2", "east"],             #0x11
+        ["l3", "down"],             #0x12
+        ["l3", "east"],             #0x13
+
+        #selector 0x05
+        ["r3", "west"],             #0x14
+        ["r3", "north"],            #0x15
+        ["l2", "west"],             #0x16
+        ["l2", "north"],            #0x17
+
+        #selector 0x06
+        ["r3", "down"],             #0x18
+        ["r3", "east"],             #0x19
+        ["l2", "down"],             #0x1a
+        ["l2", "east"],             #0x1b
+
+        #selector 0x07
+        ["r3", "south"],            #0x1c
+        ["r4", "south"],            #0x1d
+        ["l2", "south"],            #0x1e
+        ["l1", "south"],            #0x1f
+
+        #selector 0x08
+        ["r4", "west"],             #0x20
+        ["r4", "north"],            #0x21
+        ["l1", "west"],             #0x22
+        ["l1", "north"],            #0x23
+
+        #selector 0x09
+        ["r4", "down"],             #0x24
+        ["r4", "east"],             #0x25
+        ["l1", "down"],             #0x26
+        ["l1", "east"],             #0x27
+
+        #selector 0x0a
+        ["rt", "lower_outside"],    #0x28
+        ["rt", "upper_outside"],    #0x29
+        ["lt", "lower_outside"],    #0x2a
+        ["lt", "upper_outside"],    #0x2b
+
+        #selector 0x0b
+        ["rt", "down"],             #0x2c
+        ["rt", "down_down"],        #0x2d
+        ["lt", "down"],             #0x2e
+        ["lt", "down_down"],        #0x2f
+
+        #selector 0x0c
+        ["rt", "inside"],           #0x30
+        ["rt", "up"],               #0x31
+        ["lt", "inside"],           #0x32
+        ["rt", "up"]                #0x33
+    );
+
+    my(%keycode_map);
+    for (my($i)=ord("a"); $i<=ord("z"); $i++) {
+        $keycode_map{chr($i)} = $i - ord("a") + 4;
+    }
+    $keycode_map{" "} = 0x2c;
+    $keycode_map{"-"} = 0x2d;
+    $keycode_map{"="} = 0x2e;
+    $keycode_map{"["} = 0x2f;
+    $keycode_map{"]"} = 0x30;
+    $keycode_map{"\\"} = 0x31;
+    $keycode_map{";"} = 0x33;
+    $keycode_map{"'"} = 0x34;
+    $keycode_map{"`"} = 0x35;
+    $keycode_map{","} = 0x36;
+    $keycode_map{"."} = 0x37;
+    $keycode_map{"/"} = 0x38;
+
+    for (my($i)=0; $i<0x34; $i++) {
+        my($index_map_item) = $index_map[$i];
+        my($finger_map) = $normal_key_map{$index_map_item->[0]};
+
+        if (!$finger_map) {
+            emit ".byte 0\n";
+            next;
+        }
+
+        my($finger_char) = $finger_map->{$index_map_item->[1]};
+        if (!defined($finger_char)) {
+            emit ".byte 0\n";
+            next;
+        }
+
+        my($keycode) = $keycode_map{$finger_char};
+        if (!defined($keycode)) {
+            emit ".byte 0\n";
+            next;
+        }
+
+        emit ".byte $keycode\n";
+    }
 }

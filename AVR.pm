@@ -44,6 +44,7 @@ BEGIN {
         "call",
         "cbi",
         "cbr",
+        "cli",
         "clr",
         "com",
         "cp",

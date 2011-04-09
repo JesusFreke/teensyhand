@@ -117,6 +117,9 @@ emit_sub "eor_int", sub {
         _push zl;
         _push zh;
 
+        _lds r16, UEINTX;
+        _push r16;
+
         #check for endpoints with interrupts
         _lds r16, UEINT;
 
@@ -136,6 +139,9 @@ emit_sub "eor_int", sub {
         _rjmp "usb_stall";
 
         emit_sub "usb_enp_end", sub {
+            _pop r16;
+            _sts UENUM, r16;
+
             _pop zh;
             _pop zl;
             _pop r25;
