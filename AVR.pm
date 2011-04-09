@@ -120,11 +120,14 @@ sub emit_blank_line {
 }
 
 sub memory_variable {
-    no strict 'refs';
     my($name) = shift || die "no variable name specified";
-    emit ".lcomm $name, 1\n";
+    my($size) = shift || 1;
+    emit ".lcomm $name, $size\n";
 
-    *$name = sub () { $name };
+    {
+        no strict 'refs';
+        *$name = sub () { $name };
+    }
 }
 
 sub emit_sub {
