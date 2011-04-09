@@ -504,9 +504,9 @@ sub CONFIGURE_GPIO {
 
         #set/clear the appropriate bit in the DDRX register
         if ($dir == GPIO_DIR_IN) {
-            _cbi (0x03 * $port) + 1, $pin;
+            _cbi 0x03 * $port + 1, $pin;
         } elsif ($dir == GPIO_DIR_OUT) {
-            _sbi (0x03 * $port) + 1, $pin;
+            _sbi 0x03 * $port + 1, $pin;
         } else {
             die "unknown gpio direction";
         }
@@ -518,9 +518,9 @@ sub CONFIGURE_GPIO {
 
         #set/clear the appropriate bit in the PORTX register
         if ($pullup == GPIO_PULLUP_DISABLED) {
-            _cbi (0x03 * $port) + 2, $pin;
+            _cbi 0x03 * $port + 2, $pin;
         } elsif ($pullup == GPIO_PULLUP_ENABLED) {
-            _sbi (0x03 * $port) + 2, $pin;
+            _sbi 0x03 * $port + 2, $pin;
         }
     }
 
