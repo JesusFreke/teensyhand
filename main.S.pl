@@ -96,6 +96,20 @@ emit_global_sub "main", sub {
     #initialize register with commonly used "zero" value
     _clr r15_zero;
 
+    _ldi zl, 0x00;
+    _ldi zh, 0x01;
+
+    #reset all memory to 0s
+    block {
+        _st "z+", r15_zero;
+        
+        _cpi zl, 0x00;
+        _brne begin_label;
+
+        _cpi zh, 0x21;
+        _brne begin_label;
+    };
+
     usb_init();
 
     #timer1_init();
