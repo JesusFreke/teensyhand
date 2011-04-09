@@ -29,6 +29,3 @@ my($ret) = $dev->control_msg(0b11000000, 0x01, $begin_address, 0, $buffer, $coun
 print "ret: $ret\n";
 print "data length: " . length($buffer) . "\n";
 print "data: " . join(", ", (unpack("C*", $buffer))) . "\n";
-
-$dev->attach_kernel_driver_np(0);
-$dev->close();
