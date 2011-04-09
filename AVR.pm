@@ -19,6 +19,7 @@ BEGIN {
     our(@insns) = (
         "adc",
         "add",
+        "adiw",
         "and",
         "andi",
         "asr",
@@ -52,6 +53,7 @@ BEGIN {
         "eor",
         "ijmp",
         "in",
+        "inc",
         "ld",
         "ldd",
         "ldi",
@@ -72,9 +74,11 @@ BEGIN {
         "sbrc",
         "sbrs",
         "sei",
+        "ser",
         "st",
         "sts",
-        "sub"
+        "sub",
+        "swap"
     );
 
     for my $name (@insns) {

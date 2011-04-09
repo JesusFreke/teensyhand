@@ -40,7 +40,8 @@ emit_global_sub "t3_int", sub {
     #read the current selector and button states
     _in $r16_button_states, IO(PIND);
     _mov $r17_descriptor, $r16_button_states;
-    _cbr $r16_button_states, 0x0f;
+    _swap $r16_button_states;
+    _cbr $r16_button_states, 0xf0;
     _cbr $r17_descriptor, 0xf0;
 
     #update selector
@@ -76,9 +77,53 @@ emit_global_sub "t3_int", sub {
         _ld r18, "z";
 
         _eor r18, $r16_button_states;
-        _breq end_label;
+        block {
+            _brne end_label;
+            _reti;
+        };
 
+        #we have at least 1 event, iterate through the 4 bits and add any events
+        #to the queue
         _st "z", $r16_button_states;
+
+        for (my $i=0; $i<4; $i++) {
+            #We could factor out some of this logic, but there is a fairly low chance
+            #of more than 1 button changing state, so it is actually better to "inline"
+            #the logic into each block, and keep the fast path as fast as possible
+            block {
+                _sbrs r18, $i;
+                _rjmp end_label;
+
+                #we found an event - process it
+
+                #calculate the button index
+                _mov r19, $r17_descriptor;
+                _lsl r19;
+                _lsl r19;
+                if ($i) {
+                    _ldi r20, $i;
+                    _add r19, r20;
+                }
+
+                #store whether it was a button press (1) or release (0) in the MSB of r19
+                _bst $r16_button_states, $i;
+                _bld r19, 7;
+
+                _ldi zl, lo8(button_event_queue);
+                _ldi zh, hi8(button_event_queue);
+
+                _lds r20, button_event_count;
+                _cpi r20, 0x20;
+                _brsh end_label;
+
+                _add zl, r20;
+                _adc zh, r15_zero;
+
+                _st "z", r19;
+                _inc r20;
+                _sts button_event_count, r20;
+            };
+        }
     };
 
     _reti;
