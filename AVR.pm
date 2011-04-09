@@ -250,12 +250,29 @@ sub jump_table {
     emit_blank_line;
 }
 
-use constant CLOCK_DIV_1 =>     0b0000;
-use constant CLKPR => 0x61;
+use constant PINA => 0x20;
+use constant DDRA => 0x21;
+use constant PORTA => 0x22;
+
+use constant PINB => 0x23;
+use constant DDRB => 0x24;
+use constant PORTB => 0x25;
+
+use constant PINC => 0x26;
+use constant DDRC => 0x27;
+use constant PORTC => 0x28;
 
 use constant PIND => 0x29;
-use constant DDRD => 0x2A;
-use constant PORTD => 0x2B;
+use constant DDRD => 0x2a;
+use constant PORTD => 0x2b;
+
+use constant PINE => 0x2c;
+use constant DDR => 0x2d;
+use constant PORTE => 0x2e;
+
+use constant PINF => 0x2f;
+use constant DDRF => 0x30;
+use constant PORTF => 0x31;
 
 use constant PLLCSR => 0x49;
 use constant PLOCK => 0;
@@ -272,6 +289,18 @@ use constant BIT_S => 4;
 use constant BIT_H => 5;
 use constant BIT_T => 6;
 use constant BIT_I => 7;
+
+use constant CLKPR => 0x61;
+use constant CLKPCE => 7;
+use constant CLOCK_DIV_1 => 0b0000;
+use constant CLOCK_DIV_2 => 0b0001;
+use constant CLOCK_DIV_4 => 0b0010;
+use constant CLOCK_DIV_8 => 0b0011;
+use constant CLOCK_DIV_16 => 0b0100;
+use constant CLOCK_DIV_32 => 0b0101;
+use constant CLOCK_DIV_64 => 0b0110;
+use constant CLOCK_DIV_128 => 0b0111;
+use constant CLOCK_DIV_256 => 0b1000;
 
 use constant TIMSK1 => 0x6f;
 use constant ICIE1 => 5;
