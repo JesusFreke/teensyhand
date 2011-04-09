@@ -8,7 +8,7 @@ ASSEM_SRCS=$(filter-out $(PERL_SRCS:.S.pl=.S),$(wildcard *.S))
 SRCS=$(PERL_SRCS) $(ASSEM_SRCS)
 OBJS=$(patsubst %.S.pl,%.o,$(SRCS:.S=.o))
 
-all: $(MODULE).hex
+all: clean $(MODULE).hex
 list: all $(MODULE).lst
 
 main.S: AVR.pm usb.pm timer.pm
