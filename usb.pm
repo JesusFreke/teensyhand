@@ -155,7 +155,7 @@ emit_sub "eor_int", sub {
 
             #is it a vendor request?
             _sbrc $r16_bmRequestType, 6;
-            _rjmp "usb_stall";
+            _rjmp "handle_vendor_packet";
 
             jump_table(value=>$r17_bRequest, initial_index=>0, invalid_value_label=>"setup_unknown", table=>[
                 "setup_get_status",         #0x00
@@ -193,6 +193,14 @@ emit_sub "eor_int", sub {
                     "hid_set_idle",         #0x0a
                     "hid_set_protocol"      #0x0b
                 ]);
+            };
+
+            emit_sub "handle_vendor_packet", sub {
+                _ldi r24, 0x01;
+                _cpse $r17_bRequest, r24;
+                _rjmp "usb_stall";
+
+                _rjmp "vendor_get_memory";
             };
 
             emit_sub "setup_get_status", sub {
@@ -279,7 +287,7 @@ emit_sub "eor_int", sub {
                         _ldi $r22_wLength_lo, $descriptor->{size};
                     };
 
-                    _rjmp "usb_send_data_short";
+                    _rjmp "usb_send_program_data_short";
                 };
 
                 emit_sub "setup_get_configuration_descriptor", sub {
@@ -294,7 +302,7 @@ emit_sub "eor_int", sub {
                         _ldi $r22_wLength_lo, $descriptor->{size};
                     };
 
-                    _rjmp "usb_send_data_short";
+                    _rjmp "usb_send_program_data_short";
                 };
 
                 emit_sub "setup_get_string_descriptor", sub {
@@ -325,7 +333,7 @@ emit_sub "eor_int", sub {
                             _mov $r22_wLength_lo, r23;
                         };
 
-                        _rjmp "usb_send_data_short";
+                        _rjmp "usb_send_program_data_short";
                     };
                     _rjmp "usb_stall";
                 };
@@ -342,7 +350,7 @@ emit_sub "eor_int", sub {
                         _ldi $r22_wLength_lo, $descriptor->{size};
                     };
 
-                    _rjmp "usb_send_data_short";
+                    _rjmp "usb_send_program_data_short";
                 }
             };
 
@@ -448,6 +456,29 @@ emit_sub "eor_int", sub {
             emit_sub "hid_set_protocol", sub {
                 _rjmp "usb_stall";
             };
+
+            emit_sub "vendor_get_memory", sub {
+                my($r23_current_packet_len) = "r23";
+                my($r24_temp_reg) = "r24";
+                my($r22_data_len) = "r22";
+
+                block {
+                    _sts PORTC, r15_zero;
+                    _cpi $r16_bmRequestType, 0b11000000;
+                    _brne end_label;
+
+                    #if more than 255 bytes are requested, round down to 255
+                    #(i.e. set the low byte to 255 - the high byte is otherwise ignored)
+                    _cpse $r23_wLength_hi, r15_zero;
+                    _ldi $r22_wLength_lo, 0xff;
+
+                    _mov zl, $r18_wValue_lo;
+                    _mov zh, $r19_wValue_hi;
+
+                    _rjmp "usb_send_memory_data_short";
+                };
+                _reti;
+            };
         };
     };
 
@@ -463,12 +494,12 @@ emit_sub "eor_int", sub {
         _reti;
     };
 
-    #Sends up to 255 bytes to the currently selected usb endpoint
+    #Sends up to 255 bytes of program memory to the currently selected usb endpoint
     #zh:zl should point to the data to send
     #r22 should contain the amount of data to send
     #r10 should contain the maximum packet length for this endpoint
     #r22, r23 and r24 will be clobbered on exit
-    emit_sub "usb_send_data_short", sub {
+    emit_sub "usb_send_program_data_short", sub {
         my($r22_data_len) = "r22";
         my($r23_current_packet_len) = "r23";
         my($r24_temp_reg) = "r24";
@@ -491,6 +522,56 @@ emit_sub "eor_int", sub {
             #queue the data for the next packet
             block {
                 _lpm $r24_temp_reg, "z+";
+                _sts UEDATX, $r24_temp_reg;
+                _dec r23;
+                _brne begin_label;
+            };
+
+            #send the data
+            USB_SEND_QUEUED_DATA $r24_temp_reg;
+
+            _sub $r22_data_len, $r10_max_packet_length;
+
+            #if z is set, we are done sending data, and need to send a zlp
+            #if c is set, we are done sending data, and don't need to send a zlp
+            #if neither of the above, we have more data to send
+
+            _brbs BIT_C, end_label;
+            _brbc BIT_Z, begin_label;
+            USB_SEND_ZLP r24;
+        };
+
+        _reti;
+    };
+
+    #Sends up to 255 bytes of data memory to the currently selected usb endpoint
+    #zh:zl should point to the data to send
+    #r22 should contain the amount of data to send
+    #r10 should contain the maximum packet length for this endpoint
+    #r22, r23 and r24 will be clobbered on exit
+    emit_sub "usb_send_memory_data_short", sub {
+        my($r22_data_len) = "r22";
+        my($r23_current_packet_len) = "r23";
+        my($r24_temp_reg) = "r24";
+
+        block {
+            #load the size of the next packet into r23
+            _mov $r23_current_packet_len, $r10_max_packet_length;
+
+            #if data_len <= current_packet_len
+            block {
+                _cp $r23_current_packet_len, $r22_data_len;
+                _brlo end_label;
+
+                _mov $r23_current_packet_len, $r22_data_len;
+            };
+
+            #txini must be set before we queue any data
+            USB_WAIT_FOR_TXINI r24;
+
+            #queue the data for the next packet
+            block {
+                _ld $r24_temp_reg, "z+";
                 _sts UEDATX, $r24_temp_reg;
                 _dec r23;
                 _brne begin_label;
