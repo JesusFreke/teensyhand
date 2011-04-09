@@ -44,16 +44,23 @@ BEGIN {
         "cbi",
         "cbr",
         "clr",
+        "com",
         "cp",
         "cpi",
         "cpse",
         "dec",
+        "eor",
         "ijmp",
+        "in",
+        "ld",
+        "ldd",
         "ldi",
         "lds",
         "lpm",
         "lsl",
         "mov",
+        "or",
+        "out",
         "ret",
         "reti",
         "rjmp",
@@ -65,6 +72,7 @@ BEGIN {
         "sbrc",
         "sbrs",
         "sei",
+        "st",
         "sts",
         "sub"
     );
@@ -91,8 +99,12 @@ BEGIN {
         *$regname = sub () { $regname; };
     }
 
+    use constant yl => "r28";
+    use constant yh => "r29";
+
     use constant zl => "r30";
     use constant zh => "r31";
+
     use constant r15_zero => "r15";
 }
 
@@ -312,6 +324,13 @@ use constant OCIE1B => 2;
 use constant OCIE1A => 1;
 use constant TOIE1 => 0;
 
+use constant TIMSK3 => 0x71;
+use constant ICIE3 => 5;
+use constant OCIE3C => 3;
+use constant OCIE3B => 2;
+use constant OCIE3A => 1;
+use constant TOIE3 => 0;
+
 use constant TCCR1B => 0x81;
 use constant ICNC1 => 7;
 use constant ICES1 => 6;
@@ -326,8 +345,20 @@ use constant TIMER_CLK_1024 => 0b101;
 use constant TIMER_CLK_EXT_RISE => 0b110;
 use constant TIMER_CLK_EXT_FALL => 0b111;
 
+use constant TCCR3B => 0x91;
+use constant ICNC3 => 7;
+use constant ICES3 => 6;
+use constant WGM33 => 4;
+use constant WGM32 => 3;
+
 use constant OCR1AL => 0x88;
 use constant OCR1AH => 0x89;
+
+use constant TCNT3L => 0x94;
+use constant TCNT3H => 0x95;
+
+use constant OCR3AL => 0x98;
+use constant OCR3AH => 0x99;
 
 use constant UHWCON => 0xd7;
 use constant UIMOD => 7;

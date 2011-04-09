@@ -38,7 +38,7 @@ __vectors:
 /*ADC*/         ISR reti
 /*EEREADY*/     ISR reti
 /*T3CAPT*/      ISR reti
-/*T3COMPA*/     ISR reti
+/*T3COMPA*/     ISR rjmp t3_int;
 /*T3COMPB*/     ISR reti
 /*T3COMPC*/     ISR reti
 /*T3OVF*/       ISR reti

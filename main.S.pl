@@ -10,6 +10,11 @@ BEGIN {
     #done in begin section, so that declared constants can be accessed further down
     memory_variable "current_configuration";
     memory_variable "hid_idle_period";
+
+    #contains the button states for each selector value
+    #the button states are stored in the high nibble of each byte.
+    #The low nibbles are not used
+    memory_variable "button_states", 13;
     emit ".text\n";
 }
 
@@ -86,10 +91,33 @@ emit_global_sub "main", sub {
 
     #timer1_init();
 
+    timer3_init();
+    enable_timer3(r16);
+
     #enable interrupts
     _sei;
 
     block {
+        _ldi yh, hi8(button_states);
+        _ldi yl, lo8(button_states);
+
+        _ld r0, "Y";
+
+        for (my $i=1; $i<13; $i++) {
+            _ldd r1, "Y+$i";
+            _or r0, r1;
+        }
+
+        block {
+            _breq end_label;
+
+            _sts PORTC, r15_zero;
+            _rjmp begin_label parent;
+        };
+
+        _clr r0;
+        _com r0;
+        _sts PORTC, r0;
         _rjmp begin_label;
     };
 }
