@@ -434,21 +434,21 @@ use constant GPIO_DIR_OUT => 2;
 use constant GPIO_PULLUP_DISABLED => 1;
 use constant GPIO_PULLUP_ENABLED => 2;
 
-use constant GPIO_PORT_A => 1;
-use constant GPIO_PORT_B => 2;
-use constant GPIO_PORT_C => 3;
-use constant GPIO_PORT_D => 4;
-use constant GPIO_PORT_E => 5;
-use constant GPIO_PORT_F => 6;
+use constant GPIO_PORT_A => 0;
+use constant GPIO_PORT_B => 1;
+use constant GPIO_PORT_C => 2;
+use constant GPIO_PORT_D => 3;
+use constant GPIO_PORT_E => 4;
+use constant GPIO_PORT_F => 5;
 
-use constant PIN_0 => 1;
-use constant PIN_1 => 2;
-use constant PIN_2 => 3;
-use constant PIN_3 => 4;
-use constant PIN_4 => 5;
-use constant PIN_5 => 6;
-use constant PIN_6 => 7;
-use constant PIN_7 => 8;
+use constant PIN_0 => 0;
+use constant PIN_1 => 1;
+use constant PIN_2 => 2;
+use constant PIN_3 => 3;
+use constant PIN_4 => 4;
+use constant PIN_5 => 5;
+use constant PIN_6 => 6;
+use constant PIN_7 => 7;
 
 use constant EP_0 => 1;
 use constant EP_1 => 2;
@@ -461,8 +461,11 @@ sub CONFIGURE_GPIO {
     my(%args) = @_;
     my($dir) = $args{dir};
     my($pullup) = $args{pullup};
-    my($port) = $args{port} || die "no port specified";
-    my($pin) = $args{pin} || die "no pin specified";
+    my($port) = $args{port};
+    my($pin) = $args{pin};
+
+    die "no port specified" unless defined($args{port});
+    die "no pin specified" unless defined($args{pin});
 
     my($printed_blank) = 0;
 
@@ -472,9 +475,9 @@ sub CONFIGURE_GPIO {
 
         #set/clear the appropriate bit in the DDRX register
         if ($dir == GPIO_DIR_IN) {
-            _cbi 0x03 * ($port - 1) + 1, $pin - 1;
+            _cbi (0x03 * $port) + 1, $pin;
         } elsif ($dir == GPIO_DIR_OUT) {
-            _sbi 0x03 * ($port - 1) + 1, $pin - 1;
+            _sbi (0x03 * $port) + 1, $pin;
         } else {
             die "unknown gpio direction";
         }
@@ -482,12 +485,13 @@ sub CONFIGURE_GPIO {
 
     if ($pullup) {
         emit_blank_line unless ($printed_blank);
+        $printed_blank = 1;
 
         #set/clear the appropriate bit in the PORTX register
         if ($pullup == GPIO_PULLUP_DISABLED) {
-            _cbi 0x03 * ($port - 1) + 2, $pin - 1;
+            _cbi (0x03 * $port) + 2, $pin;
         } elsif ($pullup == GPIO_PULLUP_ENABLED) {
-            _sbi 0x03 * ($port - 1) + 2, $pin - 1;
+            _sbi (0x03 * $port) + 2, $pin;
         }
     }
 
