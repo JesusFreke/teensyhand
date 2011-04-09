@@ -450,12 +450,12 @@ use constant PIN_5 => 5;
 use constant PIN_6 => 6;
 use constant PIN_7 => 7;
 
-use constant EP_0 => 1;
-use constant EP_1 => 2;
-use constant EP_2 => 3;
-use constant EP_3 => 4;
-use constant EP_4 => 5;
-use constant EP_5 => 6;
+use constant EP_0 => 0;
+use constant EP_1 => 1;
+use constant EP_2 => 2;
+use constant EP_3 => 3;
+use constant EP_4 => 4;
+use constant EP_5 => 5;
 
 sub CONFIGURE_GPIO {
     my(%args) = @_;
@@ -499,10 +499,13 @@ sub CONFIGURE_GPIO {
 }
 
 sub SELECT_EP {
-    my($tempreg) = shift || die "no temporary register given";
-    my($endpoint) = shift || die "no endpoint given";
+    if (scalar(@_) < 2) {
+        die "not enough args";
+    }
+    my($tempreg) = shift;
+    my($endpoint) = shift;
 
-    _ldi $tempreg, $endpoint-1;
+    _ldi $tempreg, $endpoint;
     _sts UENUM, $tempreg;
 }
 
