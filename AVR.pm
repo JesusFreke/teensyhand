@@ -1,5 +1,7 @@
 use strict;
 
+use Carp qw(confess);
+
 use constant NO_ARG => 0;
 use constant ONE_ARG => 1;
 use constant TWO_ARG => 2;
@@ -201,7 +203,7 @@ sub begin_label {
 
     my($stack_size) = scalar(@block_stack);
     if ($stack_size <= $block_level) {
-        die "requested label for nonexistent block";
+        confess "requested label for nonexistent block";
     }
 
     return $block_stack[$stack_size - $block_level - 1]->[0];
@@ -212,7 +214,7 @@ sub end_label {
 
     my($stack_size) = scalar(@block_stack);
     if ($stack_size <= $block_level) {
-        die "requested label for nonexistent block";
+        confess "requested label for nonexistent block";
     }
 
     return $block_stack[$stack_size - $block_level - 1]->[1];
