@@ -54,6 +54,7 @@ BEGIN {
         "cpse",
         "dec",
         "eor",
+        "icall",
         "ijmp",
         "in",
         "inc",
