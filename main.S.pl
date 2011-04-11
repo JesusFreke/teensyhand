@@ -424,14 +424,14 @@ $action_map{"down"} = simple_keycode(0x51);
 $action_map{"up"} = simple_keycode(0x52);
 $action_map{"numlock"} = simple_keycode(0x53);
 
-$action_map{"lctrl"} = flag_keycode(0xe0);
-$action_map{"lshift"} = flag_keycode(0xe1);
-$action_map{"lalt"} = flag_keycode(0xe2);
-$action_map{"lgui"} = flag_keycode(0xe3);
-$action_map{"rctrl"} = flag_keycode(0xe4);
-$action_map{"rshift"} = flag_keycode(0xe5);
-$action_map{"ralt"} = flag_keycode(0xe6);
-$action_map{"rgui"} = flag_keycode(0xe7);
+$action_map{"lctrl"} = modifier_keycode(0xe0);
+$action_map{"lshift"} = modifier_keycode(0xe1);
+$action_map{"lalt"} = modifier_keycode(0xe2);
+$action_map{"lgui"} = modifier_keycode(0xe3);
+$action_map{"rctrl"} = modifier_keycode(0xe4);
+$action_map{"rshift"} = modifier_keycode(0xe5);
+$action_map{"ralt"} = modifier_keycode(0xe6);
+$action_map{"rgui"} = modifier_keycode(0xe7);
 
 $action_map{"nas"} = undefined_action();
 $action_map{"naslock"} = undefined_action();
@@ -657,6 +657,41 @@ emit_sub "handle_shifted_release", sub {
     _ret;
 };
 
+#handle a modifier key press
+#r16 should contain a mask that specifies which modifier should be sent
+#the mask should use the same bit ordering as the modifier byte in the
+#hid report
+emit_sub "handle_modifier_press", sub {
+    #first, check if the modifier key is already pressed
+    block {
+        #grab the modifier byte from the hid report and check if the modifier is already pressed
+        _lds r17, "current_report + 20";
+        _cp r18, r17;
+        _and r17, r16;
+        _brne end_label;
+
+        #set the modifier bit and store it
+        _or r18, r16;
+        _sts "current_report + 20", r18;
+
+        _rjmp "send_hid_report";
+    };
+};
+
+#handle a modifier key release
+#r16 should contain a mask that specifies which modifier should be sent
+#the mask should use the same bit ordering as the modifier byte in the
+#hid report
+emit_sub "handle_modifier_release", sub {
+    #clear the modifier bit and store it
+    _lds r17, "current_report + 20";
+    _com r16;
+    _and r17, r16;
+    _sts "current_report + 20", r17;
+
+    _rjmp "send_hid_report";
+};
+
 #sends current_report as an hid report
 emit_sub "send_hid_report", sub {
     #now, we need to send the hid report
@@ -732,13 +767,47 @@ sub shifted_keycode {
     }
 }
 
-sub flag_keycode {
+sub modifier_keycode {
+    my($keycode) = shift;
     return sub {
+        my($press) = shift;
         my($label) = "action_$action_count";
         $action_count++;
-        emit_sub $label, sub {
-            _ret;
-        };
+        if ($press) {
+            emit_sub $label, sub {
+                #add additional logic for lshift key
+                if ($keycode == 0xe1) {
+                    #set the "physical" flag in lshift_status
+                    _lds r16, lshift_status;
+                    _sbr r16, 0b10000000;
+                    _sts lshift_status, r16;
+                }
+
+                _ldi r16, MASK($keycode - 0xe0);
+                _rjmp "handle_modifier_press";
+            };
+        } else {
+            emit_sub $label, sub {
+
+                #add additional logic for lshift key
+                if ($keycode == 0xe1) {
+                    block {
+                        #clear the "physical" flag in lshift_status
+                        _lds r16, lshift_status;
+                        _cbr r16, 0b10000000;
+                        _sts lshift_status, r16;
+
+                        #check if the virtual count is > 0, if so, don't release shift
+                        _breq end_label;
+
+                        _ret;
+                    };
+                }
+
+                _ldi r16, MASK($keycode - 0xe0);
+                _rjmp "handle_modifier_release";
+            };
+        }
         return $label;
     }
 }
