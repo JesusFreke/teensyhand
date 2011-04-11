@@ -21,7 +21,7 @@ BEGIN {
     #since we get mod 256 arithmetic "for free"
     memory_variable "button_event_queue", 0x100;
 
-    #The head and tail of the queue
+    #The head and tail of the button queue
     memory_variable "button_event_head", 1;
     memory_variable "button_event_tail", 1;
 
@@ -37,11 +37,24 @@ BEGIN {
     #contains the current state of the hid report
     memory_variable "current_report", 21;
 
+    #the MSB is a flag that indicates whether the actual, physical shift button is pressed
+    #The lower 7 bits contain a count of the "shifted" keys that are pressed
+    memory_variable "lshift_status", 1;
+
     emit ".text\n";
 }
 
 use constant BUTTON_RELEASE => 0;
 use constant BUTTON_PRESS => 1;
+
+use constant BIT_LCTRL => 0;
+use constant BIT_LSHIFT => 1;
+use constant BIT_LALT => 2;
+use constant BIT_LGUI => 3;
+use constant BIT_RCTRL => 4;
+use constant BIT_RSHIFT => 5;
+use constant BIT_RALT => 6;
+use constant BIT_RGUI => 7;
 
 do "descriptors.pm";
 die $@ if ($@);
@@ -552,6 +565,66 @@ emit_sub "send_simple_keycode_release", sub {
     _ret;
 };
 
+#sends a shifted key press
+#r16 should contain the keycode to send
+emit_sub "send_shifted_keycode_press", sub {
+    #increment the virtual count for the lshift key
+    _lds r17, lshift_status;
+    _inc r17;
+    _sts lshift_status, r17;
+
+    block {
+        #we need to send a shift press only if it's not already pressed
+
+        #grab the modifier byte from the hid report and check if shift is pressed
+        _lds r17, "current_report + 20";
+        _sbrc r17, BIT_LSHIFT;
+        _rjmp end_label;
+
+        #set the lshift bit
+        _sbr r17, MASK(BIT_LSHIFT);
+        _sts "current_report + 20", r17;
+        _push r16;
+        _call "send_hid_report";
+        _pop r16;
+    };
+
+    _rjmp "send_simple_keycode_press";
+};
+
+#sends a shifted key release
+#r16 should contain the keycode to release
+emit_sub "send_shifted_keycode_release", sub {
+    _call "send_simple_keycode_release";
+
+    #decrement the virtual count for the lshift key
+    _lds r17, lshift_status;
+    _dec r17;
+    _sts lshift_status, r17;
+
+    block {
+        #we need to send a shift release when lshift is currently present in the
+        #hid report and lshift_status is 0 (e.g. both the physical flag and virtual
+        #count are 0)
+
+        #first, check if lshift_status is 0 (after we decremented the count)
+        _cpi r17, 0;
+        _brne end_label;
+
+        #next, check if lshift is present in the hid report
+        _lds r17, "current_report + 20";
+        _sbrs r17, BIT_LSHIFT;
+        _rjmp end_label;
+
+        #clear the lshift bit and send the hid report
+        _cbr r17, MASK(BIT_LSHIFT);
+        _sts "current_report + 20", r17;
+        _rjmp "send_hid_report";
+    };
+
+    _ret;
+};
+
 #sends current_report as an hid report
 emit_sub "send_hid_report", sub {
     #now, we need to send the hid report
@@ -607,12 +680,22 @@ sub simple_keycode {
 }
 
 sub shifted_keycode {
+    my($keycode) = shift;
     return sub {
+        my($press) = shift;
         my($label) = "action_$action_count";
         $action_count++;
-        emit_sub $label, sub {
-            _ret;
-        };
+        if ($press) {
+            emit_sub $label, sub {
+                _ldi r16, $keycode;
+                _rjmp "send_shifted_keycode_press";
+            };
+        } else {
+            emit_sub $label, sub {
+                _ldi r16, $keycode;
+                _rjmp "send_shifted_keycode_release";
+            };
+        }
         return $label;
     }
 }
