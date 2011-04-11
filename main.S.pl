@@ -628,29 +628,29 @@ emit_sub "send_shifted_keycode_release", sub {
 #sends current_report as an hid report
 emit_sub "send_hid_report", sub {
     #now, we need to send the hid report
-    SELECT_EP r16, EP_1;
+    SELECT_EP r17, EP_1;
 
     block {
-        _lds r16, UEINTX;
-        _sbrs r16, RWAL;
+        _lds r17, UEINTX;
+        _sbrs r17, RWAL;
         _rjmp begin_label;
     };
 
     _ldi zl, lo8(current_report);
     _ldi zh, hi8(current_report);
 
-    _ldi r16, 21;
+    _ldi r17, 21;
 
     block {
-        _ld r17, "z+";
-        _sts UEDATX, r17;
-        _dec r16;
+        _ld r18, "z+";
+        _sts UEDATX, r18;
+        _dec r17;
         _brne begin_label;
     };
 
-    _lds r16, UEINTX;
-    _cbr r16, MASK(FIFOCON);
-    _sts UEINTX, r16;
+    _lds r17, UEINTX;
+    _cbr r17, MASK(FIFOCON);
+    _sts UEINTX, r17;
     _ret;
 };
 
