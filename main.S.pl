@@ -508,6 +508,8 @@ emit_sub "send_simple_keycode_press", sub {
             #have we reached the end?
             _cp r24, zl;
             _breq end_label parent;
+
+            _rjmp begin_label parent;
         };
 
         _st "-z", r16;
@@ -539,6 +541,8 @@ emit_sub "send_simple_keycode_release", sub {
             #have we reached the end?
             _cp r24, zl;
             _breq end_label parent;
+
+            _rjmp begin_label parent;
         };
 
         _st "-z", r15_zero;
