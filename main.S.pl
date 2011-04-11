@@ -559,12 +559,9 @@ emit_sub "send_hid_report", sub {
 
     block {
         _lds r16, UEINTX;
-        _sbrs r16, TXINI;
+        _sbrs r16, RWAL;
         _rjmp begin_label;
     };
-
-    _cbr r16, MASK(TXINI);
-    _sts UEINTX, r16;
 
     _ldi zl, lo8(current_report);
     _ldi zh, hi8(current_report);
