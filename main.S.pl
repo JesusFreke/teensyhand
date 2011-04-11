@@ -501,15 +501,49 @@ emit_sub "no_action", sub {
     _ret;
 };
 
-#sends a simple, non-modified key press
+#handle the press of a simple (non-shifted) key
 #r16 should contain the keycode to send
-emit_sub "send_simple_keycode_press", sub {
+emit_sub "handle_simple_press", sub {
+    #first, we need to check if a virtual lshift is being pressed
+    #if so, we need to release the virtual lshift before sending the keycode
+    block {
+        #check if lshift is pressed in the report
+        _lds r17, "current_report + 20";
+        _sbrs r17, BIT_LSHIFT;
+        _rjmp end_label;
+
+        #if the physical flag is set, the actual physical lshift button is being pressed
+        #and we don't want to release it
+        _lds r18, lshift_status;
+        _sbrc r18, 7;
+        _rjmp end_label;
+
+        #it looks like we have a virtual lshift. Clear it and send a report
+        _cbr r17, MASK(BIT_LSHIFT);
+        _sts "current_report + 20", r17;
+        _call "send_hid_report";
+    };
+    _rjmp "send_keycode_press";
+};
+
+#handle the release of a simple (non-shifted) key
+#r16 should contain the keycode to release
+emit_sub "handle_simple_release", sub {
+    _rjmp "send_keycode_release";
+};
+
+#adds a keycode to the hid report and sends it
+#r16 should contain the keycode to send
+emit_sub "send_keycode_press", sub {
     #find the first 0 in current_report, and store the new keycode there
     _ldi zl, lo8(current_report);
     _ldi zh, hi8(current_report);
 
     _mov r24, zl;
     _adiw r24, 0x20;
+
+    #TODO: we need to handle duplicate keys. e.g. if two buttons are pressed
+    #and one is a shifted variant of the other
 
     block {
         _ld r17, "z+";
@@ -536,7 +570,7 @@ emit_sub "send_simple_keycode_press", sub {
 
 #sends a simple, non-modified key release
 #r16 should contain the keycode to release
-emit_sub "send_simple_keycode_release", sub {
+emit_sub "send_keycode_release", sub {
     #find the keycode in current_report, and zero it out
     _ldi zl, lo8(current_report);
     _ldi zh, hi8(current_report);
@@ -565,9 +599,9 @@ emit_sub "send_simple_keycode_release", sub {
     _ret;
 };
 
-#sends a shifted key press
+#handle a shifted key press
 #r16 should contain the keycode to send
-emit_sub "send_shifted_keycode_press", sub {
+emit_sub "handle_shifted_press", sub {
     #increment the virtual count for the lshift key
     _lds r17, lshift_status;
     _inc r17;
@@ -584,18 +618,16 @@ emit_sub "send_shifted_keycode_press", sub {
         #set the lshift bit
         _sbr r17, MASK(BIT_LSHIFT);
         _sts "current_report + 20", r17;
-        _push r16;
         _call "send_hid_report";
-        _pop r16;
     };
 
-    _rjmp "send_simple_keycode_press";
+    _rjmp "send_keycode_press";
 };
 
-#sends a shifted key release
+#handle a shifted key release
 #r16 should contain the keycode to release
-emit_sub "send_shifted_keycode_release", sub {
-    _call "send_simple_keycode_release";
+emit_sub "handle_shifted_release", sub {
+    _call "send_keycode_release";
 
     #decrement the virtual count for the lshift key
     _lds r17, lshift_status;
@@ -667,12 +699,12 @@ sub simple_keycode {
         if ($press) {
             emit_sub $label, sub {
                 _ldi r16, $keycode;
-                _rjmp "send_simple_keycode_press";
+                _rjmp "handle_simple_press";
             };
         } else {
             emit_sub $label, sub {
                 _ldi r16, $keycode;
-                _rjmp "send_simple_keycode_release";
+                _rjmp "handle_simple_release";
             };
         }
         return $label;
@@ -688,12 +720,12 @@ sub shifted_keycode {
         if ($press) {
             emit_sub $label, sub {
                 _ldi r16, $keycode;
-                _rjmp "send_shifted_keycode_press";
+                _rjmp "handle_shifted_press";
             };
         } else {
             emit_sub $label, sub {
                 _ldi r16, $keycode;
-                _rjmp "send_shifted_keycode_release";
+                _rjmp "handle_shifted_release";
             };
         }
         return $label;
