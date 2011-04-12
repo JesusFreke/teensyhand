@@ -65,6 +65,7 @@ BEGIN {
         "lpm",
         "lsl",
         "mov",
+        "movw",
         "or",
         "out",
         "push",

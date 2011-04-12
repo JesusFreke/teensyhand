@@ -41,14 +41,21 @@ BEGIN {
     #The lower 7 bits contain a count of the "shifted" keys that are pressed
     memory_variable "lshift_status", 1;
 
-    #The current keyboard mode
-    #0 - normal
-    #1 - nas
-    memory_variable "current_mode", 1;
+    #The address of the press table for the current keyboard mode
+    memory_variable "current_press_table", 2;
 
-    #The current "persistent" mode. When a temporary mode is activated, this is the mode that it
-    #will go back to when the temporary mode has been released - i.e. nas mode
-    memory_variable "persistent_mode", 1;
+    #The address of the press table for the "persistent" mode - that is, the mode that we go back
+    #to after a temporary mode switch (i.e. the nas button)
+    memory_variable "persistent_mode_press_table", 2;
+
+    #This contains a 2-byte entry for each button, which is the address of a routine to
+    #execute when the button is released. The entry for a button is updated when the button
+    #is pressed, to reflect the correct routine to use when it is released
+    #In this way, we can correctly handle button releases when the mode changes while a
+    #button is pressed
+    memory_variable "release_table", 104;
+
+
 
     emit ".text\n";
 }
@@ -64,9 +71,6 @@ use constant BIT_RCTRL => 4;
 use constant BIT_RSHIFT => 5;
 use constant BIT_RALT => 6;
 use constant BIT_RGUI => 7;
-
-use constant MODE_NORMAL => 0;
-use constant MODE_NAS => 1;
 
 do "descriptors.pm";
 die $@ if ($@);
@@ -164,6 +168,14 @@ emit_global_sub "main", sub {
     #enable interrupts
     _sei;
 
+    #initialize the press tables
+    _ldi r16, lo8("press_table_0");
+    _sts current_press_table, r16;
+    _sts persistent_mode_press_table, r16;
+
+    _ldi r16, hi8("press_table_0");
+    _sts "current_press_table + 1", r16;
+    _sts "persistent_mode_press_table + 1", r16;
 
     block {
         #wait for an input event and dequeue it
@@ -207,52 +219,40 @@ sub process_input_event {
         #extract the button index and store it in r17
         _mov r17, r16;
         _cbr r17, 0x80;
+        #we really only need index*2 for address offsets/lookups (which are 2 bytes each)
+        _lsl r17;
 
-        #check whether it's a press or release, and load the appropriate table address into y
         block {
             block {
+                #is it a press or release?
                 _sbrc r16, 7;
                 _rjmp end_label;
 
-                #it's a release event. Load the address for the correct press table
-                _lds r18, current_mode;
-                _lsl r18;
-                _ldi zl, lo8("release_table_map");
-                _ldi zh, hi8("release_table_map");
-                _add zl, r18;
+                #it's a release event. Load the handler address from the release table
+                _ldi zl, lo8(release_table);
+                _ldi zh, hi8(release_table);
+                _add zl, r17;
                 _adc zh, r15_zero;
-                _lpm r18, "z+";
-                _lpm r19, "z";
-                _mov zl, r18;
-                _mov zh, r19;
+                _ld r18, "z+";
+                _ld r19, "z";
+                _movw zl, r18;
 
                 _rjmp end_label parent;
             };
 
-            #it's a press event. Load the address for the correct press table
-            _lds r18, current_mode;
-            _lsl r18;
-            _ldi zl, lo8("press_table_map");
-            _ldi zh, hi8("press_table_map");
-            _add zl, r18;
+            #it's a press event. Load the address for the current press table
+            _lds zl, current_press_table;
+            _lds zh, "current_press_table+1";
+
+            #lookup the handler address from the table
+            _add zl, r17;
             _adc zh, r15_zero;
-            _lpm r18, "z+";
-            _lpm r19, "z";
-            _mov zl, r18;
-            _mov zh, r19;
+            _lpm r16, "z+";
+            _lpm r17, "z";
+            _movw zl, r16;
         };
 
-        #lookup the handler address from the table, and store it back into z
-        _lsl r17;
-        _add zl, r17;
-        _adc zh, r15_zero;
-        _lpm r16, "z+";
-        _lpm r17, "z";
-        _mov zl, r16;
-        _mov zh, r17;
-
         _icall;
-
     };
 }
 
@@ -525,8 +525,9 @@ for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
 
         #this will emit the code for the press and release action
         #and then we save the names in the two arrays, so we can emit a jump table afterwards
-        push @press_actions, &$action(BUTTON_PRESS);
-        push @release_actions, &$action(BUTTON_RELEASE);
+        my($actions) = &$action($i);
+        push @press_actions, $actions->[BUTTON_PRESS];
+        push @release_actions, $actions->[BUTTON_RELEASE];
     }
 
     #now emit the jump table for normal press actions
@@ -553,18 +554,6 @@ for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
         }
     };
 }
-
-emit_sub "press_table_map", sub {
-    for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
-        emit ".word press_table_$key_map_index\n";
-    }
-};
-
-emit_sub "release_table_map", sub {
-    for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
-        emit ".word release_table_$key_map_index\n";
-    }
-};
 
 emit_sub "no_action", sub {
     _ret;
@@ -796,119 +785,177 @@ BEGIN {
 }
 sub simple_keycode {
     my($keycode) = shift;
+
     return sub {
-        my($press) = shift;
-        my($label) = "action_$action_count";
+        my($button_index) = shift;
+
+        my($press_label) = "simple_press_action_$action_count";
+        my($release_label) = "simple_release_action_$action_count";
         $action_count++;
-        if ($press) {
-            emit_sub $label, sub {
-                _ldi r16, $keycode;
-                _rjmp "handle_simple_press";
-            };
-        } else {
-            emit_sub $label, sub {
-                _ldi r16, $keycode;
-                _rjmp "handle_simple_release";
-            };
-        }
-        return $label;
+
+        emit_sub $press_label, sub {
+            #store the address for the release routine
+            _ldi r16, lo8(pm($release_label));
+            _sts "release_table + " . ($button_index * 2), r16;
+            _ldi r16, hi8(pm($release_label));
+            _sts "release_table + " . (($button_index * 2) + 1), r16;
+
+            _ldi r16, $keycode;
+            _rjmp "handle_simple_press";
+        };
+
+        emit_sub $release_label, sub {
+            _ldi r16, $keycode;
+            _rjmp "handle_simple_release";
+        };
+
+        return [$release_label, $press_label];
     }
 }
 
 sub shifted_keycode {
     my($keycode) = shift;
+
     return sub {
-        my($press) = shift;
-        my($label) = "action_$action_count";
+        my($button_index) = shift;
+
+        my($press_label) = "shifted_press_action_$action_count";
+        my($release_label) = "shifted_release_action_$action_count";
         $action_count++;
-        if ($press) {
-            emit_sub $label, sub {
-                _ldi r16, $keycode;
-                _rjmp "handle_shifted_press";
-            };
-        } else {
-            emit_sub $label, sub {
-                _ldi r16, $keycode;
-                _rjmp "handle_shifted_release";
-            };
-        }
-        return $label;
+
+        emit_sub $press_label, sub {
+            #store the address for the release routine
+            _ldi r16, lo8(pm($release_label));
+            _sts "release_table + " . ($button_index * 2), r16;
+            _ldi r16, hi8(pm($release_label));
+            _sts "release_table + " . (($button_index * 2) + 1), r16;
+
+            _ldi r16, $keycode;
+            _rjmp "handle_shifted_press";
+        };
+
+        emit_sub $release_label, sub {
+            _ldi r16, $keycode;
+            _rjmp "handle_shifted_release";
+        };
+
+        return [$release_label, $press_label];
     }
 }
 
 sub modifier_keycode {
     my($keycode) = shift;
+
     return sub {
-        my($press) = shift;
-        my($label) = "action_$action_count";
+        my($button_index) = shift;
+
+        my($press_label) = "modifier_press_action_$action_count";
+        my($release_label) = "modifier_release_action_$action_count";
         $action_count++;
-        if ($press) {
-            emit_sub $label, sub {
-                #add additional logic for lshift key
-                if ($keycode == 0xe1) {
-                    #set the "physical" flag in lshift_status
+
+        emit_sub $press_label, sub {
+            #add additional logic for lshift key
+            if ($keycode == 0xe1) {
+                #set the "physical" flag in lshift_status
+                _lds r16, lshift_status;
+                _sbr r16, 0b10000000;
+                _sts lshift_status, r16;
+            }
+
+            #store the address for the release routine
+            _ldi r16, lo8(pm($release_label));
+            _sts "release_table + " . ($button_index * 2), r16;
+            _ldi r16, hi8(pm($release_label));
+            _sts "release_table + " . (($button_index * 2) + 1), r16;
+
+            _ldi r16, MASK($keycode - 0xe0);
+            _rjmp "handle_modifier_press";
+        };
+
+        emit_sub $release_label, sub {
+            #add additional logic for lshift key
+            if ($keycode == 0xe1) {
+                block {
+                    #clear the "physical" flag in lshift_status
                     _lds r16, lshift_status;
-                    _sbr r16, 0b10000000;
+                    _cbr r16, 0b10000000;
                     _sts lshift_status, r16;
-                }
 
-                _ldi r16, MASK($keycode - 0xe0);
-                _rjmp "handle_modifier_press";
-            };
-        } else {
-            emit_sub $label, sub {
+                    #check if the virtual count is > 0, if so, don't release shift
+                    _breq end_label;
 
-                #add additional logic for lshift key
-                if ($keycode == 0xe1) {
-                    block {
-                        #clear the "physical" flag in lshift_status
-                        _lds r16, lshift_status;
-                        _cbr r16, 0b10000000;
-                        _sts lshift_status, r16;
+                    _ret;
+                };
+            }
 
-                        #check if the virtual count is > 0, if so, don't release shift
-                        _breq end_label;
+            _ldi r16, MASK($keycode - 0xe0);
+            _rjmp "handle_modifier_release";
+        };
 
-                        _ret;
-                    };
-                }
-
-                _ldi r16, MASK($keycode - 0xe0);
-                _rjmp "handle_modifier_release";
-            };
-        }
-        return $label;
+        return [$release_label, $press_label];
     }
 }
 
 sub nas_action {
     return sub {
-        my($press) = shift;
-        my($label) = "action_$action_count";
+        my($button_index) = shift;
+
+        my($press_label) = "nas_press_action_$action_count";
+        my($release_label) = "nas_release_action_$action_count";
         $action_count++;
-        if ($press) {
-            emit_sub $label, sub {
-                _ldi r16, MODE_NAS;
-                _sts current_mode, r16;
-                _ret;
-            };
-        } else {
-            emit_sub $label, sub {
-                _lds r16, persistent_mode;
-                _sts current_mode, r16;
-            };
-        }
-        return $label;
+
+        emit_sub $press_label, sub {
+            #store the address for the release routine
+            _ldi r16, lo8(pm($release_label));
+            _sts "release_table + " . ($button_index * 2), r16;
+            _ldi r16, hi8(pm($release_label));
+            _sts "release_table + " . (($button_index * 2) + 1), r16;
+
+            #update the press table pointer for the nas press table
+            _ldi r16, lo8("press_table_1");
+            _sts current_press_table, r16;
+            _ldi r16, hi8("press_table_1");
+            _sts "current_press_table + 1", r16;
+
+            _ret;
+        };
+
+        emit_sub $release_label, sub {
+            #restore the press table pointer from persistent_mode_press_table
+            _lds r16, persistent_mode_press_table;
+            _sts current_press_table, r16;
+            _lds r16, "persistent_mode_press_table + 1";
+            _sts "current_press_table + 1", r16;
+
+            _ret;
+        };
+
+        return [$release_label, $press_label];
     }
 }
 
 sub undefined_action {
     return sub {
-        my($label) = "action_$action_count";
+        my($button_index) = shift;
+
+        my($press_label) = "undefined_press_action_$action_count";
+        my($release_label) = "undefined_release_action_$action_count";
         $action_count++;
-        emit_sub $label, sub {
+
+        emit_sub $press_label, sub {
+            #store the address for the release routine
+            _ldi r16, lo8(pm($release_label));
+            _sts "release_table + " . ($button_index * 2), r16;
+            _ldi r16, hi8(pm($release_label));
+            _sts "release_table + " . (($button_index * 2) + 1), r16;
+
             _ret;
         };
-        return $label;
+
+        emit_sub $release_label, sub {
+            _ret;
+        };
+
+        return [$release_label, $press_label];
     }
 }
