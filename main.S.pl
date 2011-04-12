@@ -83,6 +83,7 @@ die $@ if ($@);
 
 sub dequeue_input_event;
 sub process_input_event;
+sub press_table_label;
 
 emit_global_sub "main", sub {
     SET_CLOCK_SPEED r16, CLOCK_DIV_1;
@@ -169,11 +170,11 @@ emit_global_sub "main", sub {
     _sei;
 
     #initialize the press tables
-    _ldi r16, lo8("press_table_0");
+    _ldi r16, lo8(press_table_label("normal"));
     _sts current_press_table, r16;
     _sts persistent_mode_press_table, r16;
 
-    _ldi r16, hi8("press_table_0");
+    _ldi r16, hi8(press_table_label("normal"));
     _sts "current_press_table + 1", r16;
     _sts "persistent_mode_press_table + 1", r16;
 
@@ -413,11 +414,16 @@ my(%func_key_map) = (
     lt => thumb_map("lshift", "capslock", "norm", "ret", "lctrl", "tab")
 );
 
-my(@key_maps) = (
-    \%normal_key_map,
-    \%nas_key_map,
-    \%func_key_map
+my(%key_maps) = (
+    "normal" => \%normal_key_map,
+    "nas" => \%nas_key_map,
+    "func" => \%func_key_map
 );
+
+sub press_table_label {
+    my($name) = shift;
+    return "press_table_$name";
+}
 
 #maps an action name to a sub that can generate the press and release code for that action
 my(%action_map);
@@ -510,8 +516,8 @@ $action_map{"naslock"} = naslock_action();
 $action_map{"func"} = func_action();
 $action_map{"norm"} = norm_action();
 
-for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
-    my($key_map) = $key_maps[$key_map_index];
+foreach my $key_map_name (keys(%key_maps)) {
+    my($key_map) = $key_maps{$key_map_name};
 
     #iterate over each physical button, and lookup and emit the code for the
     #press and release actions for each
@@ -551,22 +557,10 @@ for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
         push @release_actions, $actions->[BUTTON_RELEASE];
     }
 
-    #now emit the jump table for normal press actions
-    emit_sub "press_table_$key_map_index", sub {
+    #now emit the jump table for press actions
+    emit_sub press_table_label($key_map_name), sub {
         for (my($i)=0; $i<0x34; $i++) {
             my($action_label) = $press_actions[$i];
-            if (defined($action_label)) {
-                emit ".word pm($action_label)\n";
-            } else {
-                emit ".word pm(no_action)\n";
-            }
-        }
-    };
-
-    #now emit the jump table for normal release actions
-    emit_sub "release_table_$key_map_index", sub {
-        for (my($i)=0; $i<0x34; $i++) {
-            my($action_label) = $release_actions[$i];
             if (defined($action_label)) {
                 emit ".word pm($action_label)\n";
             } else {
@@ -934,9 +928,9 @@ sub nas_action {
             _sts "release_table + " . (($button_index * 2) + 1), r16;
 
             #update the press table pointer for the nas press table
-            _ldi r16, lo8("press_table_1");
+            _ldi r16, lo8(press_table_label("nas"));
             _sts current_press_table, r16;
-            _ldi r16, hi8("press_table_1");
+            _ldi r16, hi8(press_table_label("nas"));
             _sts "current_press_table + 1", r16;
 
             _ret;
@@ -972,10 +966,10 @@ sub naslock_action {
             _sts "release_table + " . (($button_index * 2) + 1), r16;
 
             #update the press table pointers to point to the nas press table
-            _ldi r16, lo8("press_table_1");
+            _ldi r16, lo8(press_table_label("nas"));
             _sts current_press_table, r16;
             _sts persistent_mode_press_table, r16;
-            _ldi r16, hi8("press_table_1");
+            _ldi r16, hi8(press_table_label("nas"));
             _sts "current_press_table + 1", r16;
             _sts "persistent_mode_press_table + 1", r16;
 
@@ -1006,10 +1000,10 @@ sub norm_action {
             _sts "release_table + " . (($button_index * 2) + 1), r16;
 
             #update the press table pointers to point to the nas press table
-            _ldi r16, lo8("press_table_0");
+            _ldi r16, lo8(press_table_label("normal"));
             _sts current_press_table, r16;
             _sts persistent_mode_press_table, r16;
-            _ldi r16, hi8("press_table_0");
+            _ldi r16, hi8(press_table_label("normal"));
             _sts "current_press_table + 1", r16;
             _sts "persistent_mode_press_table + 1", r16;
 
@@ -1040,10 +1034,10 @@ sub func_action {
             _sts "release_table + " . (($button_index * 2) + 1), r16;
 
             #update the press table pointers to point to the nas press table
-            _ldi r16, lo8("press_table_2");
+            _ldi r16, lo8(press_table_label("func"));
             _sts current_press_table, r16;
             _sts persistent_mode_press_table, r16;
-            _ldi r16, hi8("press_table_2");
+            _ldi r16, hi8(press_table_label("func"));
             _sts "current_press_table + 1", r16;
             _sts "persistent_mode_press_table + 1", r16;
 
