@@ -41,6 +41,15 @@ BEGIN {
     #The lower 7 bits contain a count of the "shifted" keys that are pressed
     memory_variable "lshift_status", 1;
 
+    #The current keyboard mode
+    #0 - normal
+    #1 - nas
+    memory_variable "current_mode", 1;
+
+    #The current "persistent" mode. When a temporary mode is activated, this is the mode that it
+    #will go back to when the temporary mode has been released - i.e. nas mode
+    memory_variable "persistent_mode", 1;
+
     emit ".text\n";
 }
 
@@ -55,6 +64,9 @@ use constant BIT_RCTRL => 4;
 use constant BIT_RSHIFT => 5;
 use constant BIT_RALT => 6;
 use constant BIT_RGUI => 7;
+
+use constant MODE_NORMAL => 0;
+use constant MODE_NAS => 1;
 
 do "descriptors.pm";
 die $@ if ($@);
@@ -202,15 +214,32 @@ sub process_input_event {
                 _sbrc r16, 7;
                 _rjmp end_label;
 
-                #it's a release event
-                _ldi zl, lo8("normal_release_table");
-                _ldi zh, hi8("normal_release_table");
+                #it's a release event. Load the address for the correct press table
+                _lds r18, current_mode;
+                _lsl r18;
+                _ldi zl, lo8("release_table_map");
+                _ldi zh, hi8("release_table_map");
+                _add zl, r18;
+                _adc zh, r15_zero;
+                _lpm r18, "z+";
+                _lpm r19, "z";
+                _mov zl, r18;
+                _mov zh, r19;
 
                 _rjmp end_label parent;
             };
-            #it's a press event
-            _ldi zl, lo8("normal_press_table");
-            _ldi zh, hi8("normal_press_table");
+
+            #it's a press event. Load the address for the correct press table
+            _lds r18, current_mode;
+            _lsl r18;
+            _ldi zl, lo8("press_table_map");
+            _ldi zh, hi8("press_table_map");
+            _add zl, r18;
+            _adc zh, r15_zero;
+            _lpm r18, "z+";
+            _lpm r19, "z";
+            _mov zl, r18;
+            _mov zh, r19;
         };
 
         #lookup the handler address from the table, and store it back into z
@@ -348,6 +377,29 @@ my(%normal_key_map) = (
     lt => thumb_map("lshift", "capslock", "norm", "ret", "lctrl", "tab")
 );
 
+my(%nas_key_map) = (
+    #                 d    n    e    s    w
+    r1 => finger_map("7", "&", undef, "+", "6"),
+    r2 => finger_map("8", "*", undef, undef, "^"),
+    r3 => finger_map("9", "[", "menu", undef, undef),
+    r4 => finger_map("0", "]", undef, undef, "}"),
+    #                d      dd         u       in    lo      uo
+    rt => thumb_map("nas", "naslock", "func", "sp", "lalt", "bksp"),
+
+    #                 d    n    e    s    w
+    l1 => finger_map("4", "\$", "5", "-", undef),
+    l2 => finger_map("3", "#", undef, "%", undef),
+    l3 => finger_map("2", "@", undef, undef, "esc"),
+    l4 => finger_map("1", "!", "{", "=", "del"),
+    #                d         dd          u       in     lo       uo
+    lt => thumb_map("lshift", "capslock", "norm", "ret", "lctrl", "tab")
+);
+
+my(@key_maps) = (
+    \%normal_key_map,
+    \%nas_key_map
+);
+
 #maps an action name to a sub that can generate the press and release code for that action
 my(%action_map);
 #generate actions for a-z and A-Z
@@ -423,6 +475,7 @@ $action_map{"left"} = simple_keycode(0x50);
 $action_map{"down"} = simple_keycode(0x51);
 $action_map{"up"} = simple_keycode(0x52);
 $action_map{"numlock"} = simple_keycode(0x53);
+$action_map{"menu"} = simple_keycode(0x65);
 
 $action_map{"lctrl"} = modifier_keycode(0xe0);
 $action_map{"lshift"} = modifier_keycode(0xe1);
@@ -433,67 +486,83 @@ $action_map{"rshift"} = modifier_keycode(0xe5);
 $action_map{"ralt"} = modifier_keycode(0xe6);
 $action_map{"rgui"} = modifier_keycode(0xe7);
 
-$action_map{"nas"} = undefined_action();
+$action_map{"nas"} = nas_action();
 $action_map{"naslock"} = undefined_action();
 $action_map{"func"} = undefined_action();
 
-#iterate over each physical button, and lookup and emit the code for the
-#press and release actions for each
-my(@normal_press_actions);
-my(@normal_release_actions);
-for (my($i)=0; $i<0x34; $i++) {
-    #get the finger+direction combination for this button index
-    my($index_map_item) = $index_map[$i];
+for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
+    my($key_map) = $key_maps[$key_map_index];
 
-    my($finger_name) = $index_map_item->[0];
-    my($finger_dir) = $index_map_item->[1];
+    #iterate over each physical button, and lookup and emit the code for the
+    #press and release actions for each
+    my(@press_actions);
+    my(@release_actions);
+    for (my($i)=0; $i<0x34; $i++) {
+        #get the finger+direction combination for this button index
+        my($index_map_item) = $index_map[$i];
 
-    #get the direction map for a specific finger
-    my($finger_map) = $normal_key_map{$finger_name};
+        my($finger_name) = $index_map_item->[0];
+        my($finger_dir) = $index_map_item->[1];
 
-    die "couldn't find map for finger $finger_name" unless (defined($finger_map));
+        #get the direction map for a specific finger
+        my($finger_map) = $key_map->{$finger_name};
 
-    #get the name of the action associated with this particular button
-    my($action_name) = $finger_map->{$finger_dir};
-    if (!defined($action_name)) {
-        push @normal_press_actions, undef;
-        push @normal_release_actions, undef;
-        next;
+        die "couldn't find map for finger $finger_name" unless (defined($finger_map));
+
+        #get the name of the action associated with this particular button
+        my($action_name) = $finger_map->{$finger_dir};
+        if (!defined($action_name)) {
+            push @press_actions, undef;
+            push @release_actions, undef;
+            next;
+        }
+
+        #now look up the action
+        my($action) = $action_map{$action_name};
+        if (!defined($action)) {
+            die "invalid action - $action_name";
+        }
+
+        #this will emit the code for the press and release action
+        #and then we save the names in the two arrays, so we can emit a jump table afterwards
+        push @press_actions, &$action(BUTTON_PRESS);
+        push @release_actions, &$action(BUTTON_RELEASE);
     }
 
-    #now look up the action
-    my($action) = $action_map{$action_name};
-    if (!defined($action)) {
-        die "invalid action - $action_name";
-    }
+    #now emit the jump table for normal press actions
+    emit_sub "press_table_$key_map_index", sub {
+        for (my($i)=0; $i<0x34; $i++) {
+            my($action_label) = $press_actions[$i];
+            if (defined($action_label)) {
+                emit ".word pm($action_label)\n";
+            } else {
+                emit ".word pm(no_action)\n";
+            }
+        }
+    };
 
-    #this will emit the code for the press and release action
-    #and then we save the names in the two arrays, so we can emit a jump table afterwards
-    push @normal_press_actions, &$action(BUTTON_PRESS);
-    push @normal_release_actions, &$action(BUTTON_RELEASE);
+    #now emit the jump table for normal release actions
+    emit_sub "release_table_$key_map_index", sub {
+        for (my($i)=0; $i<0x34; $i++) {
+            my($action_label) = $release_actions[$i];
+            if (defined($action_label)) {
+                emit ".word pm($action_label)\n";
+            } else {
+                emit ".word pm(no_action)\n";
+            }
+        }
+    };
 }
 
-#now emit the jump table for normal press actions
-emit_sub "normal_press_table", sub {
-    for (my($i)=0; $i<0x34; $i++) {
-        my($action_label) = $normal_press_actions[$i];
-        if (defined($action_label)) {
-            emit ".word pm($action_label)\n";
-        } else {
-            emit ".word pm(no_action)\n";
-        }
+emit_sub "press_table_map", sub {
+    for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
+        emit ".word press_table_$key_map_index\n";
     }
 };
 
-#now emit the jump table for normal release actions
-emit_sub "normal_release_table", sub {
-    for (my($i)=0; $i<0x34; $i++) {
-        my($action_label) = $normal_release_actions[$i];
-        if (defined($action_label)) {
-            emit ".word pm($action_label)\n";
-        } else {
-            emit ".word pm(no_action)\n";
-        }
+emit_sub "release_table_map", sub {
+    for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
+        emit ".word release_table_$key_map_index\n";
     }
 };
 
@@ -806,6 +875,27 @@ sub modifier_keycode {
 
                 _ldi r16, MASK($keycode - 0xe0);
                 _rjmp "handle_modifier_release";
+            };
+        }
+        return $label;
+    }
+}
+
+sub nas_action {
+    return sub {
+        my($press) = shift;
+        my($label) = "action_$action_count";
+        $action_count++;
+        if ($press) {
+            emit_sub $label, sub {
+                _ldi r16, MODE_NAS;
+                _sts current_mode, r16;
+                _ret;
+            };
+        } else {
+            emit_sub $label, sub {
+                _lds r16, persistent_mode;
+                _sts current_mode, r16;
             };
         }
         return $label;
