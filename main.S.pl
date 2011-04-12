@@ -334,7 +334,7 @@ my(@index_map) = (
     ["rt", "inside"],           #0x30
     ["rt", "up"],               #0x31
     ["lt", "inside"],           #0x32
-    ["rt", "up"]                #0x33
+    ["lt", "up"]                #0x33
 );
 
 sub finger_map {
