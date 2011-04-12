@@ -489,6 +489,7 @@ $action_map{"rgui"} = modifier_keycode(0xe7);
 $action_map{"nas"} = nas_action();
 $action_map{"naslock"} = undefined_action();
 $action_map{"func"} = undefined_action();
+$action_map{"norm"} = undefined_action();
 
 for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
     my($key_map) = $key_maps[$key_map_index];
@@ -512,8 +513,9 @@ for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
         #get the name of the action associated with this particular button
         my($action_name) = $finger_map->{$finger_dir};
         if (!defined($action_name)) {
-            push @press_actions, undef;
-            push @release_actions, undef;
+            my($labels) = &{undefined_action()}($i);
+            push @press_actions, $labels->[BUTTON_PRESS];
+            push @release_actions, $labels->[BUTTON_RELEASE];
             next;
         }
 
