@@ -395,9 +395,28 @@ my(%nas_key_map) = (
     lt => thumb_map("lshift", "capslock", "norm", "ret", "lctrl", "tab")
 );
 
+my(%func_key_map) = (
+    #                 d    n    e    s    w
+    r1 => finger_map("home", "up", "right", "down", "left"),
+    r2 => finger_map(undef, "f8", undef, "f7", "end"),
+    r3 => finger_map("printscreen", "f10", "lgui", "f9", "ins"),
+    r4 => finger_map("pause", "pgup", "f12", "pgdn", "f11"),
+    #                d      dd         u       in    lo      uo
+    rt => thumb_map("nas", "naslock", "func", "sp", "lalt", "bksp"),
+
+    #                 d    n    e    s    w
+    l1 => finger_map("home", "up", "right", "down", "left"),
+    l2 => finger_map(undef, "f6", undef, "f5", undef),
+    l3 => finger_map(undef, "f4", "numlock", "f3", "esc"),
+    l4 => finger_map(undef, "f2", "scrolllock", "f1", "del"),
+    #                d         dd          u       in     lo       uo
+    lt => thumb_map("lshift", "capslock", "norm", "ret", "lctrl", "tab")
+);
+
 my(@key_maps) = (
     \%normal_key_map,
-    \%nas_key_map
+    \%nas_key_map,
+    \%func_key_map
 );
 
 #maps an action name to a sub that can generate the press and release code for that action
@@ -488,7 +507,7 @@ $action_map{"rgui"} = modifier_keycode(0xe7);
 
 $action_map{"nas"} = nas_action();
 $action_map{"naslock"} = naslock_action();
-$action_map{"func"} = undefined_action();
+$action_map{"func"} = func_action();
 $action_map{"norm"} = norm_action();
 
 for (my($key_map_index)=0; $key_map_index<scalar(@key_maps); $key_map_index++) {
@@ -991,6 +1010,40 @@ sub norm_action {
             _sts current_press_table, r16;
             _sts persistent_mode_press_table, r16;
             _ldi r16, hi8("press_table_0");
+            _sts "current_press_table + 1", r16;
+            _sts "persistent_mode_press_table + 1", r16;
+
+            _ret;
+        };
+
+        emit_sub $release_label, sub {
+            _ret;
+        };
+
+        return [$release_label, $press_label];
+    }
+}
+
+sub func_action {
+    return sub {
+        my($button_index) = shift;
+
+        my($press_label) = "norm_press_action_$action_count";
+        my($release_label) = "norm_release_action_$action_count";
+        $action_count++;
+
+        emit_sub $press_label, sub {
+            #store the address for the release routine
+            _ldi r16, lo8(pm($release_label));
+            _sts "release_table + " . ($button_index * 2), r16;
+            _ldi r16, hi8(pm($release_label));
+            _sts "release_table + " . (($button_index * 2) + 1), r16;
+
+            #update the press table pointers to point to the nas press table
+            _ldi r16, lo8("press_table_2");
+            _sts current_press_table, r16;
+            _sts persistent_mode_press_table, r16;
+            _ldi r16, hi8("press_table_2");
             _sts "current_press_table + 1", r16;
             _sts "persistent_mode_press_table + 1", r16;
 
