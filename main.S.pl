@@ -726,7 +726,7 @@ emit_sub "handle_modifier_press", sub {
     block {
         #grab the modifier byte from the hid report and check if the modifier is already pressed
         _lds r17, "current_report + 20";
-        _cp r18, r17;
+        _mov r18, r17;
         _and r17, r16;
         _brne end_label;
 
@@ -736,6 +736,7 @@ emit_sub "handle_modifier_press", sub {
 
         _rjmp "send_hid_report";
     };
+    _ret;
 };
 
 #handle a modifier key release
