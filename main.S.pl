@@ -511,10 +511,10 @@ $action_map{"rshift"} = modifier_keycode(0xe5);
 $action_map{"ralt"} = modifier_keycode(0xe6);
 $action_map{"rgui"} = modifier_keycode(0xe7);
 
-$action_map{"nas"} = nas_action();
-$action_map{"naslock"} = naslock_action();
-$action_map{"func"} = func_action();
-$action_map{"norm"} = norm_action();
+$action_map{"nas"} = temporary_mode_action("nas");
+$action_map{"naslock"} = persistent_mode_action("nas");
+$action_map{"func"} = persistent_mode_action("func");
+$action_map{"norm"} = persistent_mode_action("normal");
 
 foreach my $key_map_name (keys(%key_maps)) {
     my($key_map) = $key_maps{$key_map_name};
@@ -912,12 +912,19 @@ sub modifier_keycode {
     }
 }
 
-sub nas_action {
+sub temporary_mode_action {
+    #this is the temporary mode that will be in effect only while this key is pressed
+    my($mode) = shift;
+
+    #we can optionally change the persistent mode - that is, the mode that will become
+    #active once the key for the temporary mode is released
+    my($persistent_mode) = shift;
+
     return sub {
         my($button_index) = shift;
 
-        my($press_label) = "nas_press_action_$action_count";
-        my($release_label) = "nas_release_action_$action_count";
+        my($press_label) = "temporary_mode_press_action_$action_count";
+        my($release_label) = "temporary_mode_release_action_$action_count";
         $action_count++;
 
         emit_sub $press_label, sub {
@@ -927,10 +934,18 @@ sub nas_action {
             _ldi r16, hi8(pm($release_label));
             _sts "release_table + " . (($button_index * 2) + 1), r16;
 
+            if ($persistent_mode) {
+                #update the persistent mode press table pointer for the nas press table
+                _ldi r16, lo8(press_table_label($persistent_mode));
+                _sts persistent_mode_press_table, r16;
+                _ldi r16, hi8(press_table_label($persistent_mode));
+                _sts "persistent_mode_press_table + 1", r16;
+            }
+
             #update the press table pointer for the nas press table
-            _ldi r16, lo8(press_table_label("nas"));
+            _ldi r16, lo8(press_table_label($mode));
             _sts current_press_table, r16;
-            _ldi r16, hi8(press_table_label("nas"));
+            _ldi r16, hi8(press_table_label($mode));
             _sts "current_press_table + 1", r16;
 
             _ret;
@@ -947,15 +962,18 @@ sub nas_action {
         };
 
         return [$release_label, $press_label];
-    }
+    };
 }
 
-sub naslock_action {
+sub persistent_mode_action {
+    #this is the persistent mode to switch to
+    my($mode) = shift;
+
     return sub {
         my($button_index) = shift;
 
-        my($press_label) = "naslock_press_action_$action_count";
-        my($release_label) = "naslock_release_action_$action_count";
+        my($press_label) = "persistent_mode_press_action_$action_count";
+        my($release_label) = "persistent_mode_release_action_$action_count";
         $action_count++;
 
         emit_sub $press_label, sub {
@@ -966,78 +984,10 @@ sub naslock_action {
             _sts "release_table + " . (($button_index * 2) + 1), r16;
 
             #update the press table pointers to point to the nas press table
-            _ldi r16, lo8(press_table_label("nas"));
+            _ldi r16, lo8(press_table_label($mode));
             _sts current_press_table, r16;
             _sts persistent_mode_press_table, r16;
-            _ldi r16, hi8(press_table_label("nas"));
-            _sts "current_press_table + 1", r16;
-            _sts "persistent_mode_press_table + 1", r16;
-
-            _ret;
-        };
-
-        emit_sub $release_label, sub {
-            _ret;
-        };
-
-        return [$release_label, $press_label];
-    }
-}
-
-sub norm_action {
-    return sub {
-        my($button_index) = shift;
-
-        my($press_label) = "norm_press_action_$action_count";
-        my($release_label) = "norm_release_action_$action_count";
-        $action_count++;
-
-        emit_sub $press_label, sub {
-            #store the address for the release routine
-            _ldi r16, lo8(pm($release_label));
-            _sts "release_table + " . ($button_index * 2), r16;
-            _ldi r16, hi8(pm($release_label));
-            _sts "release_table + " . (($button_index * 2) + 1), r16;
-
-            #update the press table pointers to point to the nas press table
-            _ldi r16, lo8(press_table_label("normal"));
-            _sts current_press_table, r16;
-            _sts persistent_mode_press_table, r16;
-            _ldi r16, hi8(press_table_label("normal"));
-            _sts "current_press_table + 1", r16;
-            _sts "persistent_mode_press_table + 1", r16;
-
-            _ret;
-        };
-
-        emit_sub $release_label, sub {
-            _ret;
-        };
-
-        return [$release_label, $press_label];
-    }
-}
-
-sub func_action {
-    return sub {
-        my($button_index) = shift;
-
-        my($press_label) = "norm_press_action_$action_count";
-        my($release_label) = "norm_release_action_$action_count";
-        $action_count++;
-
-        emit_sub $press_label, sub {
-            #store the address for the release routine
-            _ldi r16, lo8(pm($release_label));
-            _sts "release_table + " . ($button_index * 2), r16;
-            _ldi r16, hi8(pm($release_label));
-            _sts "release_table + " . (($button_index * 2) + 1), r16;
-
-            #update the press table pointers to point to the nas press table
-            _ldi r16, lo8(press_table_label("func"));
-            _sts current_press_table, r16;
-            _sts persistent_mode_press_table, r16;
-            _ldi r16, hi8(press_table_label("func"));
+            _ldi r16, hi8(press_table_label($mode));
             _sts "current_press_table + 1", r16;
             _sts "persistent_mode_press_table + 1", r16;
 
