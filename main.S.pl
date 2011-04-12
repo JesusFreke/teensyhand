@@ -487,7 +487,7 @@ $action_map{"ralt"} = modifier_keycode(0xe6);
 $action_map{"rgui"} = modifier_keycode(0xe7);
 
 $action_map{"nas"} = nas_action();
-$action_map{"naslock"} = undefined_action();
+$action_map{"naslock"} = naslock_action();
 $action_map{"func"} = undefined_action();
 $action_map{"norm"} = undefined_action();
 
@@ -930,6 +930,40 @@ sub nas_action {
             _lds r16, "persistent_mode_press_table + 1";
             _sts "current_press_table + 1", r16;
 
+            _ret;
+        };
+
+        return [$release_label, $press_label];
+    }
+}
+
+sub naslock_action {
+    return sub {
+        my($button_index) = shift;
+
+        my($press_label) = "naslock_press_action_$action_count";
+        my($release_label) = "naslock_release_action_$action_count";
+        $action_count++;
+
+        emit_sub $press_label, sub {
+            #store the address for the release routine
+            _ldi r16, lo8(pm($release_label));
+            _sts "release_table + " . ($button_index * 2), r16;
+            _ldi r16, hi8(pm($release_label));
+            _sts "release_table + " . (($button_index * 2) + 1), r16;
+
+            #update the press table pointers to point to the nas press table
+            _ldi r16, lo8("press_table_1");
+            _sts current_press_table, r16;
+            _sts persistent_mode_press_table, r16;
+            _ldi r16, hi8("press_table_1");
+            _sts "current_press_table + 1", r16;
+            _sts "persistent_mode_press_table + 1", r16;
+
+            _ret;
+        };
+
+        emit_sub $release_label, sub {
             _ret;
         };
 
