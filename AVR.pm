@@ -58,6 +58,7 @@ BEGIN {
         "ijmp",
         "in",
         "inc",
+        "jmp",
         "ld",
         "ldd",
         "ldi",

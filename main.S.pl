@@ -37,9 +37,16 @@ BEGIN {
     #contains the current state of the hid report
     memory_variable "current_report", 21;
 
-    #the MSB is a flag that indicates whether the actual, physical shift button is pressed
-    #The lower 7 bits contain a count of the "shifted" keys that are pressed
-    memory_variable "lshift_status", 1;
+    #An array with an entry for each modifier key, which contains a count of the number
+    #of keys currently pressed that "virtually" press that modifier key (like the # key,
+    #which is actually the 3 key with a virtual shift). If both the # and $ keys were
+    #pressed the count for the lshift modifier would be 2
+    memory_variable "modifier_virtual_count", 8;
+
+    #A bitmask that specifies which modifier keys are currently being physically pressed
+    #This does not take into account any modifier keys that are only being "virtually"
+    #pressed (see comments for modifier_virtual_count)
+    memory_variable "modifier_physical_status", 1;
 
     #The address of the press table for the current keyboard mode
     memory_variable "current_press_table", 2;
@@ -63,14 +70,14 @@ BEGIN {
 use constant BUTTON_RELEASE => 0;
 use constant BUTTON_PRESS => 1;
 
-use constant BIT_LCTRL => 0;
-use constant BIT_LSHIFT => 1;
-use constant BIT_LALT => 2;
-use constant BIT_LGUI => 3;
-use constant BIT_RCTRL => 4;
-use constant BIT_RSHIFT => 5;
-use constant BIT_RALT => 6;
-use constant BIT_RGUI => 7;
+use constant LCTRL_OFFSET => 0;
+use constant LSHIFT_OFFSET => 1;
+use constant LALT_OFFSET => 2;
+use constant LGUI_OFFSET => 3;
+use constant RCTRL_OFFSET => 4;
+use constant RSHIFT_OFFSET => 5;
+use constant RALT_OFFSET => 6;
+use constant RGUI_OFFSET => 7;
 
 do "descriptors.pm";
 die $@ if ($@);
@@ -430,7 +437,7 @@ my(%action_map);
 #generate actions for a-z and A-Z
 for (my($i)=ord("a"); $i<=ord("z"); $i++) {
     $action_map{chr($i)} = simple_keycode($i - ord("a") + 0x04);
-    $action_map{uc(chr($i))} = shifted_keycode($i - ord("a") + 0x04);
+    $action_map{uc(chr($i))} = modified_keycode($i - ord("a") + 0x04, LSHIFT_OFFSET);
 }
 #generate actions for 1-9
 for (my($i)=ord("1"); $i<=ord("9"); $i++) {
@@ -439,16 +446,16 @@ for (my($i)=ord("1"); $i<=ord("9"); $i++) {
 #0 comes before 1 in ascii, but after 9 in usb's keycodes
 $action_map{"0"} = simple_keycode(0x27);
 
-$action_map{"!"} = shifted_keycode(0x1e);
-$action_map{"@"} = shifted_keycode(0x1f);
-$action_map{"#"} = shifted_keycode(0x20);
-$action_map{"\$"} = shifted_keycode(0x21);
-$action_map{"%"} = shifted_keycode(0x22);
-$action_map{"^"} = shifted_keycode(0x23);
-$action_map{"&"} = shifted_keycode(0x24);
-$action_map{"*"} = shifted_keycode(0x25);
-$action_map{"("} = shifted_keycode(0x26);
-$action_map{")"} = shifted_keycode(0x27);
+$action_map{"!"} = modified_keycode(0x1e, LSHIFT_OFFSET);
+$action_map{"@"} = modified_keycode(0x1f, LSHIFT_OFFSET);
+$action_map{"#"} = modified_keycode(0x20, LSHIFT_OFFSET);
+$action_map{"\$"} = modified_keycode(0x21, LSHIFT_OFFSET);
+$action_map{"%"} = modified_keycode(0x22, LSHIFT_OFFSET);
+$action_map{"^"} = modified_keycode(0x23, LSHIFT_OFFSET);
+$action_map{"&"} = modified_keycode(0x24, LSHIFT_OFFSET);
+$action_map{"*"} = modified_keycode(0x25, LSHIFT_OFFSET);
+$action_map{"("} = modified_keycode(0x26, LSHIFT_OFFSET);
+$action_map{")"} = modified_keycode(0x27, LSHIFT_OFFSET);
 
 $action_map{"ret"} = simple_keycode(0x28);
 $action_map{"esc"} = simple_keycode(0x29);
@@ -457,27 +464,27 @@ $action_map{"tab"} = simple_keycode(0x2b);
 $action_map{"sp"} = simple_keycode(0x2c);
 
 $action_map{"-"} = simple_keycode(0x2d);
-$action_map{"_"} = shifted_keycode(0x2d);
+$action_map{"_"} = modified_keycode(0x2d, LSHIFT_OFFSET);
 $action_map{"="} = simple_keycode(0x2e);
-$action_map{"+"} = shifted_keycode(0x2e);
+$action_map{"+"} = modified_keycode(0x2e, LSHIFT_OFFSET);
 $action_map{"["} = simple_keycode(0x2f);
-$action_map{"{"} = shifted_keycode(0x2f);
+$action_map{"{"} = modified_keycode(0x2f, LSHIFT_OFFSET);
 $action_map{"]"} = simple_keycode(0x30);
-$action_map{"}"} = shifted_keycode(0x30);
+$action_map{"}"} = modified_keycode(0x30, LSHIFT_OFFSET);
 $action_map{"\\"} = simple_keycode(0x31);
-$action_map{"|"} = shifted_keycode(0x31);
+$action_map{"|"} = modified_keycode(0x31, LSHIFT_OFFSET);
 $action_map{";"} = simple_keycode(0x33);
-$action_map{":"} = shifted_keycode(0x33);
+$action_map{":"} = modified_keycode(0x33, LSHIFT_OFFSET);
 $action_map{"'"} = simple_keycode(0x34);
-$action_map{"\""} = shifted_keycode(0x34);
+$action_map{"\""} = modified_keycode(0x34, LSHIFT_OFFSET);
 $action_map{"`"} = simple_keycode(0x35);
-$action_map{"~"} = shifted_keycode(0x35);
+$action_map{"~"} = modified_keycode(0x35, LSHIFT_OFFSET);
 $action_map{","} = simple_keycode(0x36);
-$action_map{"<"} = shifted_keycode(0x36);
+$action_map{"<"} = modified_keycode(0x36, LSHIFT_OFFSET);
 $action_map{"."} = simple_keycode(0x37);
-$action_map{">"} = shifted_keycode(0x37);
+$action_map{">"} = modified_keycode(0x37, LSHIFT_OFFSET);
 $action_map{"/"} = simple_keycode(0x38);
-$action_map{"?"} = shifted_keycode(0x38);
+$action_map{"?"} = modified_keycode(0x38, LSHIFT_OFFSET);
 
 $action_map{"capslock"} = simple_keycode(0x39);
 
@@ -577,22 +584,25 @@ emit_sub "no_action", sub {
 #handle the press of a simple (non-shifted) key
 #r16 should contain the keycode to send
 emit_sub "handle_simple_press", sub {
-    #first, we need to check if a virtual lshift is being pressed
-    #if so, we need to release the virtual lshift before sending the keycode
+    #first, we need to check if a purely virtual modifier key is being pressed
+    #if so, we need to release the virtual modifier before sending the keycode
     block {
-        #check if lshift is pressed in the report
+        #grab the modifier byte from the hid report
         _lds r17, "current_report + 20";
-        _sbrs r17, BIT_LSHIFT;
-        _rjmp end_label;
+        
+        #and also grab the physical status
+        _lds r18, modifier_physical_status;
 
-        #if the physical flag is set, the actual physical lshift button is being pressed
-        #and we don't want to release it
-        _lds r18, lshift_status;
-        _sbrc r18, 7;
-        _rjmp end_label;
+        #check if there are any bits that are 1 in the hid report, but 0 in the physical status
+        _com r18;
+        _and r18, r17;
 
-        #it looks like we have a virtual lshift. Clear it and send a report
-        _cbr r17, MASK(BIT_LSHIFT);
+        #if not, we don't need to clear any virtual keys, and can proceed to send the actual key press
+        _breq end_label;
+
+        #otherwise, we need to clear the virtual modifiers and send a report
+        _com r18;
+        _and r17, r18;
         _sts "current_report + 20", r17;
         _call "send_hid_report";
     };
@@ -669,64 +679,6 @@ emit_sub "send_keycode_release", sub {
         _rjmp "send_hid_report";
     };
     #huh? couldn't find the keycode in the hid report. just return
-    _ret;
-};
-
-#handle a shifted key press
-#r16 should contain the keycode to send
-emit_sub "handle_shifted_press", sub {
-    #increment the virtual count for the lshift key
-    _lds r17, lshift_status;
-    _inc r17;
-    _sts lshift_status, r17;
-
-    block {
-        #we need to send a shift press only if it's not already pressed
-
-        #grab the modifier byte from the hid report and check if shift is pressed
-        _lds r17, "current_report + 20";
-        _sbrc r17, BIT_LSHIFT;
-        _rjmp end_label;
-
-        #set the lshift bit
-        _sbr r17, MASK(BIT_LSHIFT);
-        _sts "current_report + 20", r17;
-        _call "send_hid_report";
-    };
-
-    _rjmp "send_keycode_press";
-};
-
-#handle a shifted key release
-#r16 should contain the keycode to release
-emit_sub "handle_shifted_release", sub {
-    _call "send_keycode_release";
-
-    #decrement the virtual count for the lshift key
-    _lds r17, lshift_status;
-    _dec r17;
-    _sts lshift_status, r17;
-
-    block {
-        #we need to send a shift release when lshift is currently present in the
-        #hid report and lshift_status is 0 (e.g. both the physical flag and virtual
-        #count are 0)
-
-        #first, check if lshift_status is 0 (after we decremented the count)
-        _cpi r17, 0;
-        _brne end_label;
-
-        #next, check if lshift is present in the hid report
-        _lds r17, "current_report + 20";
-        _sbrs r17, BIT_LSHIFT;
-        _rjmp end_label;
-
-        #clear the lshift bit and send the hid report
-        _cbr r17, MASK(BIT_LSHIFT);
-        _sts "current_report + 20", r17;
-        _rjmp "send_hid_report";
-    };
-
     _ret;
 };
 
@@ -817,26 +769,27 @@ sub simple_keycode {
             _sts "release_table + " . (($button_index * 2) + 1), r16;
 
             _ldi r16, $keycode;
-            _rjmp "handle_simple_press";
+            _jmp "handle_simple_press";
         };
 
         emit_sub $release_label, sub {
             _ldi r16, $keycode;
-            _rjmp "handle_simple_release";
+            _jmp "handle_simple_release";
         };
 
         return [$release_label, $press_label];
     }
 }
 
-sub shifted_keycode {
+sub modified_keycode {
     my($keycode) = shift;
+    my($modifier_offset) = shift;
 
     return sub {
         my($button_index) = shift;
 
-        my($press_label) = "shifted_press_action_$action_count";
-        my($release_label) = "shifted_release_action_$action_count";
+        my($press_label) = "modified_press_action_$action_count";
+        my($release_label) = "modified_release_action_$action_count";
         $action_count++;
 
         emit_sub $press_label, sub {
@@ -847,12 +800,68 @@ sub shifted_keycode {
             _sts "release_table + " . (($button_index * 2) + 1), r16;
 
             _ldi r16, $keycode;
-            _rjmp "handle_shifted_press";
+
+            #TODO: the following logic should be factored out into separate methods - one for each modifier
+
+            #increment the virtual press counter for this modifier
+            _lds r17, "modifier_virtual_count + $modifier_offset";
+            _inc r17;
+            _sts "modifier_virtual_count + $modifier_offset", r17;
+
+            block {
+                #we need to send the modifier key only if it's not already pressed
+
+                #grab the modifier byte from the hid report and check if it is pressed
+                _lds r17, "current_report + 20";
+                _sbrc r17, $modifier_offset;
+                _rjmp end_label;
+
+                #set the modifier bit in the hid report
+                _sbr r17, MASK($modifier_offset);
+                _sts "current_report + 20", r17;
+                _call "send_hid_report";
+            };
+
+            _jmp "send_keycode_press";
         };
 
         emit_sub $release_label, sub {
             _ldi r16, $keycode;
-            _rjmp "handle_shifted_release";
+
+            _call "send_keycode_release";
+
+            #decrement the virtual count for the modifier key
+            _lds r17, "modifier_virtual_count + $modifier_offset";
+            _dec r17;
+            _sts "modifier_virtual_count + $modifier_offset", r17;
+
+            block {
+                #we need to release the key when (all of):
+                #1. The modifier virtual count is 0 (after decrementing for this release)
+                #2. The physical status for the modifier is 0
+                #3. The modifier in the hid report is shown as being pressed
+
+                #check if the modifier virtual count is 0 (after decrement)
+                _cpi r17, 0;
+                _brne end_label;
+
+                #check the physical flag
+                _lds r17, modifier_physical_status;
+                _sbrc r17, $modifier_offset;
+                _rjmp end_label;
+
+                #check if the modifier is pressed in the hid report
+                _lds r17, "current_report + 20";
+                _sbrs r17, $modifier_offset;
+                _rjmp end_label;
+
+                #clear the modifier bit in the report and send
+                _cbr r17, MASK($modifier_offset);
+                _sts "current_report + 20", r17;
+                _jmp "send_hid_report";
+            };
+
+            _ret;
         };
 
         return [$release_label, $press_label];
@@ -861,6 +870,7 @@ sub shifted_keycode {
 
 sub modifier_keycode {
     my($keycode) = shift;
+    my($modifier_offset) = $keycode - 0xe0;
 
     return sub {
         my($button_index) = shift;
@@ -870,13 +880,10 @@ sub modifier_keycode {
         $action_count++;
 
         emit_sub $press_label, sub {
-            #add additional logic for lshift key
-            if ($keycode == 0xe1) {
-                #set the "physical" flag in lshift_status
-                _lds r16, lshift_status;
-                _sbr r16, 0b10000000;
-                _sts lshift_status, r16;
-            }
+            #set the bit in the modifier_physical_status byte
+            _lds r16, modifier_physical_status;
+            _sbr r16, MASK($modifier_offset);
+            _sts modifier_physical_status, r16;
 
             #store the address for the release routine
             _ldi r16, lo8(pm($release_label));
@@ -884,27 +891,26 @@ sub modifier_keycode {
             _ldi r16, hi8(pm($release_label));
             _sts "release_table + " . (($button_index * 2) + 1), r16;
 
-            _ldi r16, MASK($keycode - 0xe0);
+            _ldi r16, MASK($modifier_offset);
             _rjmp "handle_modifier_press";
         };
 
         emit_sub $release_label, sub {
-            #add additional logic for lshift key
-            if ($keycode == 0xe1) {
-                block {
-                    #clear the "physical" flag in lshift_status
-                    _lds r16, lshift_status;
-                    _cbr r16, 0b10000000;
-                    _sts lshift_status, r16;
+            block {
+                #clear the bit in the modifier_physical_status byte
+                _lds r16, modifier_physical_status;
+                _cbr r16, MASK($modifier_offset);
+                _sts modifier_physical_status, r16;
 
-                    #check if the virtual count is > 0, if so, don't release shift
-                    _breq end_label;
+                #don't release the modifier if it's virtual count is still > 0
+                _lds r16, "modifier_virtual_count + $modifier_offset";
+                _cpi r16, 0;
+                _breq end_label;
 
-                    _ret;
-                };
-            }
+                _ret;
+            };
 
-            _ldi r16, MASK($keycode - 0xe0);
+            _ldi r16, MASK($modifier_offset);
             _rjmp "handle_modifier_release";
         };
 
