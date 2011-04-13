@@ -366,7 +366,7 @@ sub thumb_map {
     }
 }
 
-#maps each direction of each finger to a specific action, for normal mode
+#key map for normal mode
 my(%normal_key_map) = (
     #                 d    n    e    s    w
     r1 => finger_map("h", "g", "'", "m", "d"),
@@ -380,6 +380,27 @@ my(%normal_key_map) = (
     l1 => finger_map("u", "q", "i", "p", "\""),
     l2 => finger_map("e", ".", "y", "j", "`"),
     l3 => finger_map("o", ",", "x", "k", "esc"),
+    l4 => finger_map("a", "/", "(", ";", "del"),
+    #                d         dd          u       in     lo       uo
+    lt => thumb_map("lshift", "capslock", "norm", "ret", "lctrl", "tab")
+);
+
+#key map for when the normal mode key is held down
+#It's similar to normal mode, except that we add some shortcuts for
+#ctrl+c, ctrl+v, ctrl+x, etc.
+my(%normal_hold_key_map) = (
+    #                 d    n    e    s    w
+    r1 => finger_map("h", "g", "'", "m", "d"),
+    r2 => finger_map("t", "w", "`", "c", "f"),
+    r3 => finger_map("n", "v", undef, "r", "b"),
+    r4 => finger_map("s", "z", "\\", "l", ")"),
+    #                d      dd         u       in    lo      uo
+    rt => thumb_map("nas", "naslock", "func", "sp", "lalt", "bksp"),
+
+    #                 d    n    e    s    w
+    l1 => finger_map("u", "q", "i", "ctrlv", "\""),
+    l2 => finger_map("e", ".", "y", "ctrlc", "`"),
+    l3 => finger_map("o", ",", "x", "ctrlx", "esc"),
     l4 => finger_map("a", "/", "(", ";", "del"),
     #                d         dd          u       in     lo       uo
     lt => thumb_map("lshift", "capslock", "norm", "ret", "lctrl", "tab")
@@ -423,6 +444,7 @@ my(%func_key_map) = (
 
 my(%key_maps) = (
     "normal" => \%normal_key_map,
+    "normal_hold" => \%normal_hold_key_map,
     "nas" => \%nas_key_map,
     "func" => \%func_key_map
 );
@@ -509,6 +531,10 @@ $action_map{"up"} = simple_keycode(0x52);
 $action_map{"numlock"} = simple_keycode(0x53);
 $action_map{"menu"} = simple_keycode(0x65);
 
+$action_map{"ctrlx"} = modified_keycode(0x1b, LCTRL_OFFSET);
+$action_map{"ctrlc"} = modified_keycode(0x06, LCTRL_OFFSET);
+$action_map{"ctrlv"} = modified_keycode(0x19, LCTRL_OFFSET);
+
 $action_map{"lctrl"} = modifier_keycode(0xe0);
 $action_map{"lshift"} = modifier_keycode(0xe1);
 $action_map{"lalt"} = modifier_keycode(0xe2);
@@ -521,7 +547,7 @@ $action_map{"rgui"} = modifier_keycode(0xe7);
 $action_map{"nas"} = temporary_mode_action("nas");
 $action_map{"naslock"} = persistent_mode_action("nas");
 $action_map{"func"} = persistent_mode_action("func");
-$action_map{"norm"} = persistent_mode_action("normal");
+$action_map{"norm"} = temporary_mode_action("normal_hold", "normal");
 
 foreach my $key_map_name (keys(%key_maps)) {
     my($key_map) = $key_maps{$key_map_name};
@@ -589,7 +615,7 @@ emit_sub "handle_simple_press", sub {
     block {
         #grab the modifier byte from the hid report
         _lds r17, "current_report + 20";
-        
+
         #and also grab the physical status
         _lds r18, modifier_physical_status;
 
@@ -892,7 +918,7 @@ sub modifier_keycode {
             _sts "release_table + " . (($button_index * 2) + 1), r16;
 
             _ldi r16, MASK($modifier_offset);
-            _rjmp "handle_modifier_press";
+            _jmp "handle_modifier_press";
         };
 
         emit_sub $release_label, sub {
@@ -911,7 +937,7 @@ sub modifier_keycode {
             };
 
             _ldi r16, MASK($modifier_offset);
-            _rjmp "handle_modifier_release";
+            _jmp "handle_modifier_release";
         };
 
         return [$release_label, $press_label];
