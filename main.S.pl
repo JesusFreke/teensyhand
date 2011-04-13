@@ -952,12 +952,26 @@ sub temporary_mode_action {
         };
 
         emit_sub $release_label, sub {
-            #restore the press table pointer from persistent_mode_press_table
-            _lds r16, persistent_mode_press_table;
-            _sts current_press_table, r16;
-            _lds r16, "persistent_mode_press_table + 1";
-            _sts "current_press_table + 1", r16;
+            block {
+                #make sure that we're still in the same temporary mode. If the mode is different
+                #than what we expect, don't change modes. For example, if the user presses and holds
+                #the nas button, and then presses and hold a different temporary mode button, and
+                #then releases the nas button, we don't want to switch back to the persistent mode
+                #while the other temporary mode button is being held
+                _lds r16, current_press_table;
+                _cpi r16, lo8(press_table_label($mode));
+                _brne end_label;
 
+                _lds r16, "current_press_table + 1";
+                _cpi r16, hi8(press_table_label($mode));
+                _brne end_label;
+
+                #restore the press table pointer from persistent_mode_press_table
+                _lds r16, persistent_mode_press_table;
+                _sts current_press_table, r16;
+                _lds r16, "persistent_mode_press_table + 1";
+                _sts "current_press_table + 1", r16;
+            };
             _ret;
         };
 
