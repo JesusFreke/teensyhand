@@ -720,7 +720,8 @@ emit_sub "send_modifier_release", sub {
         _sts "current_report + 20", r18;
 
         _rjmp "send_hid_report";
-    }
+    };
+    _ret;
 };
 
 #sends current_report as an hid report
@@ -840,77 +841,121 @@ sub modified_keycode {
         $action_count++;
 
         emit_sub $press_label, sub {
-            #store the address for the release routine
-            store_release_pointer($button_index, $release_label);
-
             _ldi r16, $keycode;
-
-            #TODO: the following logic should be factored out into separate methods - one for each modifier
-
-            #increment the virtual press counter for this modifier
-            _lds r17, "modifier_virtual_count + $modifier_offset";
-            _inc r17;
-            _sts "modifier_virtual_count + $modifier_offset", r17;
-
-            block {
-                #we need to send the modifier key only if it's not already pressed
-
-                #grab the modifier byte from the hid report and check if it is pressed
-                _lds r17, "current_report + 20";
-                _sbrc r17, $modifier_offset;
-                _rjmp block_end;
-
-                #set the modifier bit in the hid report
-                _sbr r17, MASK($modifier_offset);
-                _sts "current_report + 20", r17;
-                _call "send_hid_report";
-            };
-
-            _jmp "send_keycode_press";
+            _ldi r17, lo8(pm($release_label));
+            _ldi r18, hi8(pm($release_label));
+            _ldi r19, $modifier_offset;
+            _ldi r20, MASK($modifier_offset);
+            _jmp "handle_modified_press";
         };
 
         emit_sub $release_label, sub {
             _ldi r16, $keycode;
-
-            _call "send_keycode_release";
-
-            #decrement the virtual count for the modifier key
-            _lds r17, "modifier_virtual_count + $modifier_offset";
-            _dec r17;
-            _sts "modifier_virtual_count + $modifier_offset", r17;
-
-            block {
-                #we need to release the key when (all of):
-                #1. The modifier virtual count is 0 (after decrementing for this release)
-                #2. The physical status for the modifier is 0
-                #3. The modifier in the hid report is shown as being pressed
-
-                #check if the modifier virtual count is 0 (after decrement)
-                _cpi r17, 0;
-                _brne block_end;
-
-                #check the physical flag
-                _lds r17, modifier_physical_status;
-                _sbrc r17, $modifier_offset;
-                _rjmp block_end;
-
-                #check if the modifier is pressed in the hid report
-                _lds r17, "current_report + 20";
-                _sbrs r17, $modifier_offset;
-                _rjmp block_end;
-
-                #clear the modifier bit in the report and send
-                _cbr r17, MASK($modifier_offset);
-                _sts "current_report + 20", r17;
-                _jmp "send_hid_report";
-            };
-
-            _ret;
+            _ldi r17, $modifier_offset;
+            _ldi r18, MASK($modifier_offset);
+            _jmp "handle_modified_release";
         };
 
         return [$release_label, $press_label];
     }
 }
+
+#handle the press of a modified key
+#r16        the keycode to send
+#r17:r18    the address for the release routine
+#r19        the offset of the modifier to use
+#r20        the mask of the modifier to use
+#y          the location in the release table to store the release pointer
+emit_sub "handle_modified_press", sub {
+    #save off the keycode to send
+    _mov r10, r16;
+
+    block {
+        #update the release table
+        _st "y+", r17;
+        _st "y", r18;
+
+        #increment the virtual press counter for this modifier
+        _ldi zl, lo8(modifier_virtual_count);
+        _ldi zh, hi8(modifier_virtual_count);
+        _add zl, r19;
+        _adc zh, r15_zero;
+        _ld r21, "z";
+        _inc r21;
+        _st "z", r21;
+
+        _mov r16, r20;
+        _call "send_modifier_press";
+
+        #we need to check if any other purely virtual modifier keys are being pressed
+        #if so, we need to release them before sending the keycode
+
+        #grab the modifier byte from the hid report
+        _lds r17, "current_report + 20";
+
+        #and also grab the physical status
+        _lds r18, modifier_physical_status;
+        #and set the bit for the modifier we just sent
+        _or r18, r16;
+
+        #check if there are any bits that are 1 in the hid report, but 0 in the physical status
+        _com r18;
+        _and r18, r17;
+
+        #if not, we don't need to clear any virtual keys, and can proceed to send the actual key press
+        _breq block_end;
+
+        #otherwise, we need to clear the virtual modifiers and send a report
+        _com r18;
+        _and r17, r18;
+        _sts "current_report + 20", r17;
+        _call "send_hid_report";
+    };
+
+    _mov r16, r10;
+    _rjmp "send_keycode_press";
+};
+
+#handle the release of a modified key
+#r16        the keycode to send
+#r17        the offset of the modifier to use
+#r18        the mask of the modifier to use
+emit_sub "handle_modified_release", sub {
+    #save off r17 and r18
+    _mov r10, r17;
+    _mov r11, r18;
+
+    _call "send_keycode_release";
+
+    #decrement the virtual press counter for the modifier
+    _ldi zl, lo8(modifier_virtual_count);
+    _ldi zh, hi8(modifier_virtual_count);
+    _add zl, r10;
+    _adc zh, r15_zero;
+    _ld r16, "z";
+    _dec r16;
+    _st "z", r16;
+
+    block {
+        #we need to release the modifier key when (both):
+        #1. The modifier virtual count is 0 (after decrementing for this release)
+        #2. The physical status for the modifier is 0
+        #3. The modifier in the hid report is shown as being pressed (checked in send_modifier_release)
+
+        #check if the modifier virtual count is 0 (after decrement)
+        _cpi r16, 0;
+        _brne block_end;
+
+        #check the physical flag
+        _lds r17, modifier_physical_status;
+        _and r17, r11;
+        _brne block_end;
+
+        _mov r16, r11;
+        _jmp "send_modifier_release";
+    };
+    _ret;
+};
 
 sub modifier_keycode {
     my($keycode) = shift;
