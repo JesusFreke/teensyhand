@@ -198,19 +198,19 @@ emit_global_sub "main", sub {
 
 #Waits for an input event and dequeues it into the given register
 sub dequeue_input_event {
-    _ldi yh, hi8(button_event_queue);
     block {
         _cli;
 
-        _lds yl, button_event_head;
+        _ldi zh, hi8(button_event_queue);
+        _lds zl, button_event_head;
         _lds r16, button_event_tail;
 
         block {
-            _cp yl, r16;
+            _cp zl, r16;
             _breq end_label;
 
-            _ld r16, "y+";
-            _sts button_event_head, yl;
+            _ld r16, "z+";
+            _sts button_event_head, zl;
             _sei;
             _rjmp end_label parent;
         };
