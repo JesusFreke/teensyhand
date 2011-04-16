@@ -964,47 +964,79 @@ emit_sub "handle_modified_release", sub {
 sub modifier_keycode {
     my($keycode) = shift;
     my($modifier_offset) = $keycode - 0xe0;
+    my($emitted) = 0;
+    my($labels);
 
     return sub {
-        my($button_index) = shift;
+        if (!$emitted) {
+            my($press_label) = unique_label("modifier_press_action");
+            my($release_label) = unique_label("modifier_release_action");
 
-        my($press_label) = unique_label("modifier_press_action");
-        my($release_label) = unique_label("modifier_release_action");
-
-        emit_sub $press_label, sub {
-            store_release_pointer($button_index, $release_label);
-
-            #set the bit in the modifier_physical_status byte
-            _lds r16, modifier_physical_status;
-            _sbr r16, MASK($modifier_offset);
-            _sts modifier_physical_status, r16;
-
-            _ldi r16, MASK($modifier_offset);
-            _jmp "send_modifier_press";
-        };
-
-        emit_sub $release_label, sub {
-            block {
-                #clear the bit in the modifier_physical_status byte
-                _lds r16, modifier_physical_status;
-                _cbr r16, MASK($modifier_offset);
-                _sts modifier_physical_status, r16;
-
-                #don't release the modifier if it's virtual count is still > 0
-                _lds r16, "modifier_virtual_count + $modifier_offset";
-                _cpi r16, 0;
-                _breq block_end;
-
-                _ret;
+            emit_sub $press_label, sub {
+                _ldi r16, MASK($modifier_offset);
+                _ldi r17, lo8(pm($release_label));
+                _ldi r18, hi8(pm($release_label));
+                _jmp "handle_modifier_press";
             };
 
-            _ldi r16, MASK($modifier_offset);
-            _jmp "send_modifier_release";
-        };
+            emit_sub $release_label, sub {
+                _ldi r16, $modifier_offset;
+                _ldi r17, MASK($modifier_offset);
+                _jmp "handle_modifier_release";
+            };
 
-        return [$release_label, $press_label];
+            $labels = [$release_label, $press_label];
+            $emitted = 1;
+        }
+
+        return $labels;
     }
 }
+
+#handle the press of a modifier key
+#r16        the mask of the modifier to send
+#r17:r18    the address for the release routine
+#y          the location in the release table to store the release pointer
+emit_sub "handle_modifier_press", sub {
+    #update the release table
+    _st "y+", r17;
+    _st "y", r18;
+
+    #set the bit in the modifier_physical_status byte
+    _lds r17, modifier_physical_status;
+    _or r17, r16;
+    _sts modifier_physical_status, r17;
+
+    _jmp "send_modifier_press";
+};
+
+#handle the release of a modifier key
+#r16        the offset of the modifier to release
+#r17        the mask of the modifier to release
+emit_sub "handle_modifier_release", sub {
+    block {
+        #clear the bit in the modifier_physical_status byte
+        _lds r18, modifier_physical_status;
+        _mov r19, r17;
+        _com r19;
+        _and r18, r19;
+        _sts modifier_physical_status, r18;
+
+        #don't release the modifier if it's virtual count is still > 0
+        _ldi zl, lo8(modifier_virtual_count);
+        _ldi zh, hi8(modifier_virtual_count);
+        _add zl, r16;
+        _adc zh, r15_zero;
+        _ld r18, "z";
+        _cpi r18, 0;
+        _brne block_end;
+
+        _mov r16, r17;
+        _jmp "send_modifier_release";
+    };
+
+    _ret;
+};
 
 sub temporary_mode_action {
     #this is the temporary mode that will be in effect only while this key is pressed
