@@ -764,28 +764,33 @@ sub store_release_pointer {
     _sts "release_table + " . (($button_index * 2) + 1), r16;
 }
 
+
 sub simple_keycode {
     my($keycode) = shift;
+    my($emitted) = 0;
+    my($labels);
 
     return sub {
-        my($button_index) = shift;
+        if (!$emitted) {
+            my($press_label) = unique_label("simple_press_action");
+            my($release_label) = unique_label("simple_release_action");
 
-        my($press_label) = unique_label("simple_press_action");
-        my($release_label) = unique_label("simple_release_action");
+            emit_sub $press_label, sub {
+                _ldi r16, $keycode;
+                _ldi r17, lo8(pm($release_label));
+                _ldi r18, hi8(pm($release_label));
+                _jmp "handle_simple_press";
+            };
 
-        emit_sub $press_label, sub {
-            _ldi r16, $keycode;
-            _ldi r17, lo8(pm($release_label));
-            _ldi r18, hi8(pm($release_label));
-            _jmp "handle_simple_press";
-        };
+            emit_sub $release_label, sub {
+                _ldi r16, $keycode;
+                _jmp "send_keycode_release";
+            };
 
-        emit_sub $release_label, sub {
-            _ldi r16, $keycode;
-            _jmp "send_keycode_release";
-        };
-
-        return [$release_label, $press_label];
+            $labels = [$release_label, $press_label];
+            $emitted = 1;
+        }
+        return $labels;
     }
 }
 
