@@ -252,6 +252,12 @@ sub process_input_event {
             _lds zl, current_press_table;
             _lds zh, "current_press_table+1";
 
+            #calculate and store the location in the release table, based on button index
+            _ldi yl, lo8(release_table);
+            _ldi yh, hi8(release_table);
+            _add yl, r17;
+            _adc yh, r15_zero;
+
             #lookup the handler address from the table
             _add zl, r17;
             _adc zh, r15_zero;
@@ -607,40 +613,6 @@ emit_sub "no_action", sub {
     _ret;
 };
 
-#handle the press of a simple (non-shifted) key
-#r16 should contain the keycode to send
-emit_sub "handle_simple_press", sub {
-    #first, we need to check if a purely virtual modifier key is being pressed
-    #if so, we need to release the virtual modifier before sending the keycode
-    block {
-        #grab the modifier byte from the hid report
-        _lds r17, "current_report + 20";
-
-        #and also grab the physical status
-        _lds r18, modifier_physical_status;
-
-        #check if there are any bits that are 1 in the hid report, but 0 in the physical status
-        _com r18;
-        _and r18, r17;
-
-        #if not, we don't need to clear any virtual keys, and can proceed to send the actual key press
-        _breq block_end;
-
-        #otherwise, we need to clear the virtual modifiers and send a report
-        _com r18;
-        _and r17, r18;
-        _sts "current_report + 20", r17;
-        _call "send_hid_report";
-    };
-    _rjmp "send_keycode_press";
-};
-
-#handle the release of a simple (non-shifted) key
-#r16 should contain the keycode to release
-emit_sub "handle_simple_release", sub {
-    _rjmp "send_keycode_release";
-};
-
 #adds a keycode to the hid report and sends it
 #r16 should contain the keycode to send
 emit_sub "send_keycode_press", sub {
@@ -784,7 +756,6 @@ sub store_release_pointer {
     _sts "release_table + " . (($button_index * 2) + 1), r16;
 }
 
-
 my($action_count);
 BEGIN {
      $action_count = 0;
@@ -800,20 +771,55 @@ sub simple_keycode {
         $action_count++;
 
         emit_sub $press_label, sub {
-            store_release_pointer($button_index, $release_label);
-
             _ldi r16, $keycode;
+            _ldi r17, lo8(pm($release_label));
+            _ldi r18, hi8(pm($release_label));
             _jmp "handle_simple_press";
         };
 
         emit_sub $release_label, sub {
             _ldi r16, $keycode;
-            _jmp "handle_simple_release";
+            _jmp "send_keycode_release";
         };
 
         return [$release_label, $press_label];
     }
 }
+
+#handle the press of a simple (non-modified) key
+#r16        the keycode to send
+#r17:r18    the address for the release routine
+#y          the location in the release table to store the release pointer
+emit_sub "handle_simple_press", sub {
+    block {
+        #update the release table
+        _st "y+", r17;
+        _st "y", r18;
+
+        #we need to check if a purely virtual modifier key is being pressed
+        #if so, we need to release the virtual modifier before sending the keycode
+
+        #grab the modifier byte from the hid report
+        _lds r17, "current_report + 20";
+
+        #and also grab the physical status
+        _lds r18, modifier_physical_status;
+
+        #check if there are any bits that are 1 in the hid report, but 0 in the physical status
+        _com r18;
+        _and r18, r17;
+
+        #if not, we don't need to clear any virtual keys, and can proceed to send the actual key press
+        _breq block_end;
+
+        #otherwise, we need to clear the virtual modifiers and send a report
+        _com r18;
+        _and r17, r18;
+        _sts "current_report + 20", r17;
+        _call "send_hid_report";
+    };
+    _rjmp "send_keycode_press";
+};
 
 sub modified_keycode {
     my($keycode) = shift;
