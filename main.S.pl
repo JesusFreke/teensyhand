@@ -773,6 +773,18 @@ emit_sub "send_hid_report", sub {
     _ret;
 };
 
+#stores the address for the release routine
+sub store_release_pointer {
+    my($button_index) = shift;
+    my($release_label) = shift;
+
+    _ldi r16, lo8(pm($release_label));
+    _sts "release_table + " . ($button_index * 2), r16;
+    _ldi r16, hi8(pm($release_label));
+    _sts "release_table + " . (($button_index * 2) + 1), r16;
+}
+
+
 my($action_count);
 BEGIN {
      $action_count = 0;
@@ -788,11 +800,7 @@ sub simple_keycode {
         $action_count++;
 
         emit_sub $press_label, sub {
-            #store the address for the release routine
-            _ldi r16, lo8(pm($release_label));
-            _sts "release_table + " . ($button_index * 2), r16;
-            _ldi r16, hi8(pm($release_label));
-            _sts "release_table + " . (($button_index * 2) + 1), r16;
+            store_release_pointer($button_index, $release_label);
 
             _ldi r16, $keycode;
             _jmp "handle_simple_press";
@@ -820,10 +828,7 @@ sub modified_keycode {
 
         emit_sub $press_label, sub {
             #store the address for the release routine
-            _ldi r16, lo8(pm($release_label));
-            _sts "release_table + " . ($button_index * 2), r16;
-            _ldi r16, hi8(pm($release_label));
-            _sts "release_table + " . (($button_index * 2) + 1), r16;
+            store_release_pointer($button_index, $release_label);
 
             _ldi r16, $keycode;
 
@@ -906,16 +911,12 @@ sub modifier_keycode {
         $action_count++;
 
         emit_sub $press_label, sub {
+            store_release_pointer($button_index, $release_label);
+
             #set the bit in the modifier_physical_status byte
             _lds r16, modifier_physical_status;
             _sbr r16, MASK($modifier_offset);
             _sts modifier_physical_status, r16;
-
-            #store the address for the release routine
-            _ldi r16, lo8(pm($release_label));
-            _sts "release_table + " . ($button_index * 2), r16;
-            _ldi r16, hi8(pm($release_label));
-            _sts "release_table + " . (($button_index * 2) + 1), r16;
 
             _ldi r16, MASK($modifier_offset);
             _jmp "handle_modifier_press";
@@ -960,11 +961,7 @@ sub temporary_mode_action {
         $action_count++;
 
         emit_sub $press_label, sub {
-            #store the address for the release routine
-            _ldi r16, lo8(pm($release_label));
-            _sts "release_table + " . ($button_index * 2), r16;
-            _ldi r16, hi8(pm($release_label));
-            _sts "release_table + " . (($button_index * 2) + 1), r16;
+            store_release_pointer($button_index, $release_label);
 
             if ($persistent_mode) {
                 #update the persistent mode press table pointer for the nas press table
@@ -1023,11 +1020,7 @@ sub persistent_mode_action {
         $action_count++;
 
         emit_sub $press_label, sub {
-            #store the address for the release routine
-            _ldi r16, lo8(pm($release_label));
-            _sts "release_table + " . ($button_index * 2), r16;
-            _ldi r16, hi8(pm($release_label));
-            _sts "release_table + " . (($button_index * 2) + 1), r16;
+            store_release_pointer($button_index, $release_label);
 
             #update the press table pointers to point to the nas press table
             _ldi r16, lo8(press_table_label($mode));
@@ -1057,12 +1050,7 @@ sub undefined_action {
         $action_count++;
 
         emit_sub $press_label, sub {
-            #store the address for the release routine
-            _ldi r16, lo8(pm($release_label));
-            _sts "release_table + " . ($button_index * 2), r16;
-            _ldi r16, hi8(pm($release_label));
-            _sts "release_table + " . (($button_index * 2) + 1), r16;
-
+            store_release_pointer($button_index, $release_label);
             _ret;
         };
 
