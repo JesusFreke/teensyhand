@@ -223,6 +223,16 @@ sub block_end {
     return $block_stack[$stack_size - $block_level - 1]->[1];
 }
 
+{
+    my(%label_counter);
+    sub unique_label {
+        my($label_prefix) = shift;
+        my($counter) = $label_counter{$label_prefix} || 0;
+        $label_counter{$label_prefix} = $counter+1;
+        return "${label_prefix}_$counter";
+    }
+}
+
 my($jump_table_counter) = 0;
 sub jump_table {
     my(%args) = @_;

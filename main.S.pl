@@ -764,19 +764,14 @@ sub store_release_pointer {
     _sts "release_table + " . (($button_index * 2) + 1), r16;
 }
 
-my($action_count);
-BEGIN {
-     $action_count = 0;
-}
 sub simple_keycode {
     my($keycode) = shift;
 
     return sub {
         my($button_index) = shift;
 
-        my($press_label) = "simple_press_action_$action_count";
-        my($release_label) = "simple_release_action_$action_count";
-        $action_count++;
+        my($press_label) = unique_label("simple_press_action");
+        my($release_label) = unique_label("simple_release_action");
 
         emit_sub $press_label, sub {
             _ldi r16, $keycode;
@@ -836,9 +831,8 @@ sub modified_keycode {
     return sub {
         my($button_index) = shift;
 
-        my($press_label) = "modified_press_action_$action_count";
-        my($release_label) = "modified_release_action_$action_count";
-        $action_count++;
+        my($press_label) = unique_label("modified_press_action");
+        my($release_label) = unique_label("modified_release_action");
 
         emit_sub $press_label, sub {
             _ldi r16, $keycode;
@@ -964,9 +958,8 @@ sub modifier_keycode {
     return sub {
         my($button_index) = shift;
 
-        my($press_label) = "modifier_press_action_$action_count";
-        my($release_label) = "modifier_release_action_$action_count";
-        $action_count++;
+        my($press_label) = unique_label("modifier_press_action");
+        my($release_label) = unique_label("modifier_release_action");
 
         emit_sub $press_label, sub {
             store_release_pointer($button_index, $release_label);
@@ -1014,9 +1007,8 @@ sub temporary_mode_action {
     return sub {
         my($button_index) = shift;
 
-        my($press_label) = "temporary_mode_press_action_$action_count";
-        my($release_label) = "temporary_mode_release_action_$action_count";
-        $action_count++;
+        my($press_label) = unique_label("temporary_mode_press_action");
+        my($release_label) = unique_label("temporary_mode_release_action");
 
         emit_sub $press_label, sub {
             store_release_pointer($button_index, $release_label);
@@ -1073,9 +1065,8 @@ sub persistent_mode_action {
     return sub {
         my($button_index) = shift;
 
-        my($press_label) = "persistent_mode_press_action_$action_count";
-        my($release_label) = "persistent_mode_release_action_$action_count";
-        $action_count++;
+        my($press_label) = unique_label("persistent_mode_press_action");
+        my($release_label) = unique_label("persistent_mode_release_action");
 
         emit_sub $press_label, sub {
             store_release_pointer($button_index, $release_label);
@@ -1103,9 +1094,8 @@ sub undefined_action {
     return sub {
         my($button_index) = shift;
 
-        my($press_label) = "undefined_press_action_$action_count";
-        my($release_label) = "undefined_release_action_$action_count";
-        $action_count++;
+        my($press_label) = unique_label("undefined_press_action");
+        my($release_label) = unique_label("undefined_release_action");
 
         emit_sub $press_label, sub {
             store_release_pointer($button_index, $release_label);
