@@ -39,7 +39,8 @@ clean:
 
 install: $(MODULE).hex
 	@echo install: waiting for device...
-	@teensy $(MODULE).hex
+	@dfu-programmer at90usb1286 flash $(MODULE).hex > /dev/null
+	@dfu-programmer at90usb1286 start || exit 0
 
 
 #avr-gcc -nostdlib -mmcu=at90usb1286 -Wl,-Tteensytest.ld,-Map=teensytest.map,--cref -o teensytest.elf *.o
