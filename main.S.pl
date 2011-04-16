@@ -680,11 +680,11 @@ emit_sub "send_keycode_release", sub {
     _ret;
 };
 
-#handle a modifier key press
+#send a modifier key press
 #r16 should contain a mask that specifies which modifier should be sent
 #the mask should use the same bit ordering as the modifier byte in the
 #hid report
-emit_sub "handle_modifier_press", sub {
+emit_sub "send_modifier_press", sub {
     #first, check if the modifier key is already pressed
     block {
         #grab the modifier byte from the hid report and check if the modifier is already pressed
@@ -702,18 +702,25 @@ emit_sub "handle_modifier_press", sub {
     _ret;
 };
 
-#handle a modifier key release
+#send a modifier key release
 #r16 should contain a mask that specifies which modifier should be sent
 #the mask should use the same bit ordering as the modifier byte in the
 #hid report
-emit_sub "handle_modifier_release", sub {
-    #clear the modifier bit and store it
-    _lds r17, "current_report + 20";
-    _com r16;
-    _and r17, r16;
-    _sts "current_report + 20", r17;
+emit_sub "send_modifier_release", sub {
+    block {
+        #check if the modifier is actually pressed
+        _lds r17, "current_report + 20";
+        _mov r18, r17;
+        _and r17, r16;
+        _breq block_end;
 
-    _rjmp "send_hid_report";
+        #clear the modifier bit
+        _com r16;
+        _and r18, r16;
+        _sts "current_report + 20", r18;
+
+        _rjmp "send_hid_report";
+    }
 };
 
 #sends current_report as an hid report
@@ -925,7 +932,7 @@ sub modifier_keycode {
             _sts modifier_physical_status, r16;
 
             _ldi r16, MASK($modifier_offset);
-            _jmp "handle_modifier_press";
+            _jmp "send_modifier_press";
         };
 
         emit_sub $release_label, sub {
@@ -944,7 +951,7 @@ sub modifier_keycode {
             };
 
             _ldi r16, MASK($modifier_offset);
-            _jmp "handle_modifier_release";
+            _jmp "send_modifier_release";
         };
 
         return [$release_label, $press_label];
