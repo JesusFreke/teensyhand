@@ -188,7 +188,7 @@ emit_global_sub "main", sub {
     block {
         #wait for an input event and dequeue it
         dequeue_input_event;
-        #generate and send the hid report(s)
+        #process the dequeued event
         process_input_event;
 
         #and do it all over again
@@ -196,7 +196,7 @@ emit_global_sub "main", sub {
     };
 };
 
-#Waits for an input event and dequeues it into the given register
+#Waits for an input event and dequeues it into r16
 sub dequeue_input_event {
     block {
         _cli;
