@@ -19,7 +19,7 @@ main.S: AVR.pm usb.pm timer.pm
 	@perl $< > $@
 
 %.o: %.S
-	@avr-gcc -nostdlib -mmcu=at90usb1286 -c $< -o $@
+	@avr-gcc -nostdlib -Wa,-gstabs -mmcu=at90usb1286 -c $< -o $@
 
 %.lst: %.elf
 	@avr-objdump --disassemble $< > $@
