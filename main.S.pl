@@ -160,10 +160,10 @@ emit_global_sub "main", sub {
         _st "z+", r15_zero;
 
         _cpi zl, 0x00;
-        _brne begin_label;
+        _brne block_begin;
 
         _cpi zh, 0x21;
-        _brne begin_label;
+        _brne block_begin;
     };
 
     usb_init();
@@ -192,7 +192,7 @@ emit_global_sub "main", sub {
         process_input_event;
 
         #and do it all over again
-        _rjmp begin_label;
+        _rjmp block_begin;
     };
 };
 
@@ -207,16 +207,16 @@ sub dequeue_input_event {
 
         block {
             _cp zl, r16;
-            _breq end_label;
+            _breq block_end;
 
             _ld r16, "z+";
             _sts button_event_head, zl;
             _sei;
-            _rjmp end_label parent;
+            _rjmp block_end parent;
         };
 
         _sei;
-        _rjmp begin_label;
+        _rjmp block_begin;
     };
 }
 
@@ -234,7 +234,7 @@ sub process_input_event {
             block {
                 #is it a press or release?
                 _sbrc r16, 7;
-                _rjmp end_label;
+                _rjmp block_end;
 
                 #it's a release event. Load the handler address from the release table
                 _ldi zl, lo8(release_table);
@@ -245,7 +245,7 @@ sub process_input_event {
                 _ld r19, "z";
                 _movw zl, r18;
 
-                _rjmp end_label parent;
+                _rjmp block_end parent;
             };
 
             #it's a press event. Load the address for the current press table
@@ -624,7 +624,7 @@ emit_sub "handle_simple_press", sub {
         _and r18, r17;
 
         #if not, we don't need to clear any virtual keys, and can proceed to send the actual key press
-        _breq end_label;
+        _breq block_end;
 
         #otherwise, we need to clear the virtual modifiers and send a report
         _com r18;
@@ -659,13 +659,13 @@ emit_sub "send_keycode_press", sub {
         _cp r17, r15_zero;
 
         block {
-            _breq end_label;
+            _breq block_end;
 
             #have we reached the end?
             _cp r24, zl;
-            _breq end_label parent;
+            _breq block_end parent;
 
-            _rjmp begin_label parent;
+            _rjmp block_begin parent;
         };
 
         _st "-z", r16;
@@ -692,13 +692,13 @@ emit_sub "send_keycode_release", sub {
         _cp r16, r17;
 
         block {
-            _breq end_label;
+            _breq block_end;
 
             #have we reached the end?
             _cp r24, zl;
-            _breq end_label parent;
+            _breq block_end parent;
 
-            _rjmp begin_label parent;
+            _rjmp block_begin parent;
         };
 
         _st "-z", r15_zero;
@@ -719,7 +719,7 @@ emit_sub "handle_modifier_press", sub {
         _lds r17, "current_report + 20";
         _mov r18, r17;
         _and r17, r16;
-        _brne end_label;
+        _brne block_end;
 
         #set the modifier bit and store it
         _or r18, r16;
@@ -752,7 +752,7 @@ emit_sub "send_hid_report", sub {
     block {
         _lds r17, UEINTX;
         _sbrs r17, RWAL;
-        _rjmp begin_label;
+        _rjmp block_begin;
     };
 
     _ldi zl, lo8(current_report);
@@ -764,7 +764,7 @@ emit_sub "send_hid_report", sub {
         _ld r18, "z+";
         _sts UEDATX, r18;
         _dec r17;
-        _brne begin_label;
+        _brne block_begin;
     };
 
     _lds r17, UEINTX;
@@ -845,7 +845,7 @@ sub modified_keycode {
                 #grab the modifier byte from the hid report and check if it is pressed
                 _lds r17, "current_report + 20";
                 _sbrc r17, $modifier_offset;
-                _rjmp end_label;
+                _rjmp block_end;
 
                 #set the modifier bit in the hid report
                 _sbr r17, MASK($modifier_offset);
@@ -874,17 +874,17 @@ sub modified_keycode {
 
                 #check if the modifier virtual count is 0 (after decrement)
                 _cpi r17, 0;
-                _brne end_label;
+                _brne block_end;
 
                 #check the physical flag
                 _lds r17, modifier_physical_status;
                 _sbrc r17, $modifier_offset;
-                _rjmp end_label;
+                _rjmp block_end;
 
                 #check if the modifier is pressed in the hid report
                 _lds r17, "current_report + 20";
                 _sbrs r17, $modifier_offset;
-                _rjmp end_label;
+                _rjmp block_end;
 
                 #clear the modifier bit in the report and send
                 _cbr r17, MASK($modifier_offset);
@@ -932,7 +932,7 @@ sub modifier_keycode {
                 #don't release the modifier if it's virtual count is still > 0
                 _lds r16, "modifier_virtual_count + $modifier_offset";
                 _cpi r16, 0;
-                _breq end_label;
+                _breq block_end;
 
                 _ret;
             };
@@ -989,11 +989,11 @@ sub temporary_mode_action {
                 #while the other temporary mode button is being held
                 _lds r16, current_press_table;
                 _cpi r16, lo8(press_table_label($mode));
-                _brne end_label;
+                _brne block_end;
 
                 _lds r16, "current_press_table + 1";
                 _cpi r16, hi8(press_table_label($mode));
-                _brne end_label;
+                _brne block_end;
 
                 #restore the press table pointer from persistent_mode_press_table
                 _lds r16, persistent_mode_press_table;

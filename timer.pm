@@ -59,7 +59,7 @@ emit_global_sub "t3_int", sub {
         block {
             #calculate the next selector value
             _dec r18;
-            _brbc BIT_N, end_label;
+            _brbc BIT_N, block_end;
 
             #set it back to the max value if we've gone past 0
             _ldi r18, 0x0c;
@@ -86,8 +86,8 @@ emit_global_sub "t3_int", sub {
 
         _eor r18, $r16_button_states;
         block {
-            _brne end_label;
-            _rjmp end_label parent;
+            _brne block_end;
+            _rjmp block_end parent;
         };
 
         #we have at least 1 event, iterate through the 4 bits and add any events
@@ -100,7 +100,7 @@ emit_global_sub "t3_int", sub {
             #the logic into each block, and keep the fast path as fast as possible
             block {
                 _sbrs r18, $i;
-                _rjmp end_label;
+                _rjmp block_end;
 
                 #we found an event - process it
 
@@ -127,8 +127,8 @@ emit_global_sub "t3_int", sub {
                 block {
                     #if there is no more room in the queue, bail out
                     _cp zl, r20;
-                    _brne end_label;
-                    _rjmp end_label parent;
+                    _brne block_end;
+                    _rjmp block_end parent;
                 };
 
                 _st "z+", r19;
@@ -173,7 +173,7 @@ emit_global_sub "t1_int", sub {
         #if led is on
         block {
             _sbis IO(PORTD), 6;
-            _rjmp end_label;
+            _rjmp block_end;
 
             _cbi IO(PORTD), 6;
 
@@ -182,7 +182,7 @@ emit_global_sub "t1_int", sub {
             block {
                 _lds r16, UEINTX;
                 _sbrs r16, RWAL;
-                _rjmp begin_label;
+                _rjmp block_begin;
             };
 
             _ldi r16, 21;
@@ -190,14 +190,14 @@ emit_global_sub "t1_int", sub {
             block {
                 _sts UEDATX, r15_zero;
                 _dec r16;
-                _brne begin_label;
+                _brne block_begin;
             };
 
             _lds r16, UEINTX;
             _andi r16, ~(MASK(FIFOCON) | MASK(NAKINI) | MASK(RXOUTI) | MASK(TXINI)) & 0xFF;
             _sts UEINTX, r16;
 
-            _rjmp end_label parent;
+            _rjmp block_end parent;
         };
         #else
         indent_block {
@@ -208,7 +208,7 @@ emit_global_sub "t1_int", sub {
             block {
                 _lds r16, UEINTX;
                 _sbrs r16, RWAL;
-                _rjmp begin_label;
+                _rjmp block_begin;
             };
 
             #send an 'a'
@@ -220,7 +220,7 @@ emit_global_sub "t1_int", sub {
             block {
                 _sts UEDATX, r15_zero;
                 _dec r16;
-                _brne begin_label;
+                _brne block_begin;
             };
 
             _lds r16, UEINTX;

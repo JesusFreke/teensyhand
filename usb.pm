@@ -20,7 +20,7 @@ sub usb_init {
     block {
         _lds r16, PLLCSR;
         _bst r16, PLOCK;
-        _brtc begin_label;
+        _brtc block_begin;
     };
 
     #enable VBUS pad
@@ -42,7 +42,7 @@ sub USB_WAIT_FOR_TXINI {
     block {
         _lds $tempreg, UEINTX;
         _sbrs $tempreg, TXINI;
-        _rjmp begin_label;
+        _rjmp block_begin;
     };
 }
 
@@ -126,7 +126,7 @@ emit_sub "eor_int", sub {
         #check EP0
         block {
             _sbrs r16, EPINT0;
-            _rjmp end_label;
+            _rjmp block_end;
 
             SELECT_EP r16, EP_0;
 
@@ -256,13 +256,13 @@ emit_sub "eor_int", sub {
             emit_sub "setup_set_address", sub {
                 block {
                     _cpi $r16_bmRequestType, 0b00000000;
-                    _brne end_label;
+                    _brne block_end;
 
                     _cpi $r19_wValue_hi, 0;
-                    _brne end_label;
+                    _brne block_end;
 
                     _cpi $r18_wValue_lo, 0x80;
-                    _brsh end_label;
+                    _brsh block_end;
 
                     #store the new address, but don't enable it yet
                     _sts UDADDR, $r18_wValue_lo;
@@ -290,7 +290,7 @@ emit_sub "eor_int", sub {
                 #check for normal descriptor request
                 block {
                     _cpi $r16_bmRequestType, 0b10000000;
-                    _brne end_label;
+                    _brne block_end;
 
                     jump_table(value=>$r19_wValue_hi, initial_index=>0, invalid_value_label=>"setup_get_descriptor_end", table=>[
                         "setup_get_descriptor_end",                         #0x00
@@ -303,7 +303,7 @@ emit_sub "eor_int", sub {
                 #check for HID class descriptor request
                 block {
                     _cpi $r16_bmRequestType, 0b10000001;
-                    _brne end_label;
+                    _brne block_end;
 
                     _cpi $r19_wValue_hi, DESC_HID_REPORT;
                     _breq "setup_get_hid_report_descriptor";
@@ -321,7 +321,7 @@ emit_sub "eor_int", sub {
                     #check if the requested number of bytes is less than the descriptor length
                     block {
                         _cpi $r22_wLength_lo, $descriptor->{size};
-                        _brlo end_label;
+                        _brlo block_end;
                         _ldi $r22_wLength_lo, $descriptor->{size};
                     };
 
@@ -336,7 +336,7 @@ emit_sub "eor_int", sub {
                     #check if the requested number of bytes is less than the descriptor length
                     block {
                         _cpi $r22_wLength_lo, $descriptor->{size};
-                        _brlo end_label;
+                        _brlo block_end;
                         _ldi $r22_wLength_lo, $descriptor->{size};
                     };
 
@@ -347,7 +347,7 @@ emit_sub "eor_int", sub {
                      block {
                         my($descriptor) = get_descriptor("STRING_DESCRIPTOR_TABLE");
                          _cpi $r18_wValue_lo, $descriptor->{count};
-                         _brsh end_label;
+                         _brsh block_end;
 
                         _ldi zl, lo8($descriptor->{name});
                         _ldi zh, hi8($descriptor->{name});
@@ -367,7 +367,7 @@ emit_sub "eor_int", sub {
                         #check if the requested number of bytes is less than the descriptor length
                         block {
                             _cp $r22_wLength_lo, r23;
-                            _brlo end_label;
+                            _brlo block_end;
                             _mov $r22_wLength_lo, r23;
                         };
 
@@ -384,7 +384,7 @@ emit_sub "eor_int", sub {
                     #check if the requested number of bytes is less than the descriptor length
                     block {
                         _cpi $r22_wLength_lo, $descriptor->{size};
-                        _brlo end_label;
+                        _brlo block_end;
                         _ldi $r22_wLength_lo, $descriptor->{size};
                     };
 
@@ -401,7 +401,7 @@ emit_sub "eor_int", sub {
                     USB_WAIT_FOR_TXINI r24;
 
                     _cpi $r22_wLength_lo, 0;
-                    _breq end_label;
+                    _breq block_end;
 
                     _lds r16, current_configuration;
                     _sts UEDATX, r16;
@@ -455,7 +455,7 @@ emit_sub "eor_int", sub {
                 block {
                     _sts UEDATX, r17;
                     _dec r16;
-                    _brne begin_label;
+                    _brne block_begin;
                 };
 
                 #send the data
@@ -468,7 +468,7 @@ emit_sub "eor_int", sub {
                     USB_WAIT_FOR_TXINI r24;
 
                     _cpi $r22_wLength_lo, 0;
-                    _breq end_label;
+                    _breq block_end;
 
                     _lds r16, hid_idle_period;
                     _sts UEDATX, r16;
@@ -503,7 +503,7 @@ emit_sub "eor_int", sub {
                 block {
                     _sts PORTC, r15_zero;
                     _cpi $r16_bmRequestType, 0b11000000;
-                    _brne end_label;
+                    _brne block_end;
 
                     #if more than 255 bytes are requested, round down to 255
                     #(i.e. set the low byte to 255 - the high byte is otherwise ignored)
@@ -549,7 +549,7 @@ emit_sub "eor_int", sub {
             #if data_len <= current_packet_len
             block {
                 _cp $r23_current_packet_len, $r22_data_len;
-                _brlo end_label;
+                _brlo block_end;
 
                 _mov $r23_current_packet_len, $r22_data_len;
             };
@@ -562,7 +562,7 @@ emit_sub "eor_int", sub {
                 _lpm $r24_temp_reg, "z+";
                 _sts UEDATX, $r24_temp_reg;
                 _dec r23;
-                _brne begin_label;
+                _brne block_begin;
             };
 
             #send the data
@@ -574,8 +574,8 @@ emit_sub "eor_int", sub {
             #if c is set, we are done sending data, and don't need to send a zlp
             #if neither of the above, we have more data to send
 
-            _brbs BIT_C, end_label;
-            _brbc BIT_Z, begin_label;
+            _brbs BIT_C, block_end;
+            _brbc BIT_Z, block_begin;
             USB_SEND_ZLP r24;
         };
 
@@ -599,7 +599,7 @@ emit_sub "eor_int", sub {
             #if data_len <= current_packet_len
             block {
                 _cp $r23_current_packet_len, $r22_data_len;
-                _brlo end_label;
+                _brlo block_end;
 
                 _mov $r23_current_packet_len, $r22_data_len;
             };
@@ -612,7 +612,7 @@ emit_sub "eor_int", sub {
                 _ld $r24_temp_reg, "z+";
                 _sts UEDATX, $r24_temp_reg;
                 _dec r23;
-                _brne begin_label;
+                _brne block_begin;
             };
 
             #send the data
@@ -624,8 +624,8 @@ emit_sub "eor_int", sub {
             #if c is set, we are done sending data, and don't need to send a zlp
             #if neither of the above, we have more data to send
 
-            _brbs BIT_C, end_label;
-            _brbc BIT_Z, begin_label;
+            _brbs BIT_C, block_end;
+            _brbc BIT_Z, block_begin;
             USB_SEND_ZLP r24;
         };
 

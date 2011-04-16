@@ -201,7 +201,7 @@ sub parent {
     return (shift || 0) + 1;
 }
 
-sub begin_label {
+sub block_begin {
     my($block_level) = shift;
 
     my($stack_size) = scalar(@block_stack);
@@ -212,7 +212,7 @@ sub begin_label {
     return $block_stack[$stack_size - $block_level - 1]->[0];
 }
 
-sub end_label {
+sub block_end {
     my($block_level) = shift;
 
     my($stack_size) = scalar(@block_stack);
