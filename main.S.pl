@@ -832,30 +832,35 @@ emit_sub "handle_simple_press", sub {
 sub modified_keycode {
     my($keycode) = shift;
     my($modifier_offset) = shift;
+    my($emitted) = 0;
+    my($labels);
 
     return sub {
-        my($button_index) = shift;
+        if (!$emitted) {
+            my($press_label) = unique_label("modified_press_action");
+            my($release_label) = unique_label("modified_release_action");
 
-        my($press_label) = unique_label("modified_press_action");
-        my($release_label) = unique_label("modified_release_action");
+            emit_sub $press_label, sub {
+                _ldi r16, $keycode;
+                _ldi r17, lo8(pm($release_label));
+                _ldi r18, hi8(pm($release_label));
+                _ldi r19, $modifier_offset;
+                _ldi r20, MASK($modifier_offset);
+                _jmp "handle_modified_press";
+            };
 
-        emit_sub $press_label, sub {
-            _ldi r16, $keycode;
-            _ldi r17, lo8(pm($release_label));
-            _ldi r18, hi8(pm($release_label));
-            _ldi r19, $modifier_offset;
-            _ldi r20, MASK($modifier_offset);
-            _jmp "handle_modified_press";
-        };
+            emit_sub $release_label, sub {
+                _ldi r16, $keycode;
+                _ldi r17, $modifier_offset;
+                _ldi r18, MASK($modifier_offset);
+                _jmp "handle_modified_release";
+            };
 
-        emit_sub $release_label, sub {
-            _ldi r16, $keycode;
-            _ldi r17, $modifier_offset;
-            _ldi r18, MASK($modifier_offset);
-            _jmp "handle_modified_release";
-        };
+            $labels =  [$release_label, $press_label];
+            $emitted = 1;
+        }
 
-        return [$release_label, $press_label];
+        return $labels;
     }
 }
 
