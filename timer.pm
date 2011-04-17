@@ -40,6 +40,9 @@ emit_global_sub "t3_int", sub {
     _push zl;
     _push zh;
 
+    _lds r16, SREG;
+    _push r16;
+
     disable_timer3;
 
     my($r16_button_states) = "r16";
@@ -136,6 +139,9 @@ emit_global_sub "t3_int", sub {
             };
         }
     };
+
+    _pop r16;
+    _sts SREG, r16;
 
     _pop zh;
     _pop zl;

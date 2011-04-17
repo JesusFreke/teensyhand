@@ -117,6 +117,9 @@ emit_sub "eor_int", sub {
         _push zl;
         _push zh;
 
+        _lds r16, SREG;
+        _push r16;
+
         _lds r16, UEINTX;
         _push r16;
 
@@ -141,6 +144,9 @@ emit_sub "eor_int", sub {
         emit_sub "usb_enp_end", sub {
             _pop r16;
             _sts UENUM, r16;
+
+            _pop r16;
+            _sts SREG, r16;
 
             _pop zh;
             _pop zl;
