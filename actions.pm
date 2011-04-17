@@ -398,18 +398,6 @@ emit_sub "send_hid_report", sub {
     _ret;
 };
 
-#stores the address for the release routine
-sub store_release_pointer {
-    my($button_index) = shift;
-    my($release_label) = shift;
-
-    _ldi r16, lo8(pm($release_label));
-    _sts "release_table + " . ($button_index * 2), r16;
-    _ldi r16, hi8(pm($release_label));
-    _sts "release_table + " . (($button_index * 2) + 1), r16;
-}
-
-
 sub simple_keycode {
     my($keycode) = shift;
     my($emitted) = 0;
