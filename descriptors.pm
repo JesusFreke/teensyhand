@@ -336,7 +336,8 @@ descriptor("DESCRIPTORS",
             byte(0xDD),
 
             #Input item (array)
-            byte(HID_ITEM_DATA_SIZE_0 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_INPUT),
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_INPUT),
+            byte(0x00),
 
             #------------Modifier List---------
             #Report size
