@@ -1198,21 +1198,37 @@ emit_sub "handle_persistent_mode_press", sub {
 };
 
 sub undefined_action {
+    my($emitted) = 0;
+    my($labels);
+
     return sub {
-        my($button_index) = shift;
+        if (!$emitted) {
+            my($press_label) = unique_label("undefined_press_action");
+            my($release_label) = unique_label("undefined_release_action");
 
-        my($press_label) = unique_label("undefined_press_action");
-        my($release_label) = unique_label("undefined_release_action");
+            emit_sub $press_label, sub {
+                _ldi r16, lo8(pm($release_label));
+                _ldi r17, hi8(pm($release_label));
+                _rjmp "handle_undefined_press";
+            };
 
-        emit_sub $press_label, sub {
-            store_release_pointer($button_index, $release_label);
-            _ret;
-        };
+            emit_sub $release_label, sub {
+                _ret;
+            };
 
-        emit_sub $release_label, sub {
-            _ret;
-        };
-
-        return [$release_label, $press_label];
+            $labels = [$release_label, $press_label];
+            $emitted = 1;
+        }
+        return $labels;
     }
 }
+
+#handle the press of a persistent mode key
+#r16:r17    the address for the release routine
+#y          the location in the release table to store the release pointer
+emit_sub "handle_undefined_press", sub {
+    #update the release table
+    _st "y+", r16;
+    _st "y", r17;
+    _ret;
+};
