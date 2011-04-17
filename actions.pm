@@ -574,7 +574,7 @@ emit_sub "handle_modified_release", sub {
     _st "z", r16;
 
     block {
-        #we need to release the modifier key when (both):
+        #we need to release the modifier key when (all of):
         #1. The modifier virtual count is 0 (after decrementing for this release)
         #2. The physical status for the modifier is 0
         #3. The modifier in the hid report is shown as being pressed (checked in send_modifier_release)
