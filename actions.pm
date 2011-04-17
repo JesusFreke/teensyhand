@@ -252,19 +252,11 @@ sub generate_key_maps {
         emit_sub press_table_label($key_map_name), sub {
             for (my($i)=0; $i<0x34; $i++) {
                 my($action_label) = $press_actions[$i];
-                if (defined($action_label)) {
-                    emit ".word pm($action_label)\n";
-                } else {
-                    emit ".word pm(no_action)\n";
-                }
+                emit ".word pm($action_label)\n";
             }
         };
     }
 }
-
-emit_sub "no_action", sub {
-    _ret;
-};
 
 #adds a keycode to the hid report and sends it
 #r16 should contain the keycode to send
