@@ -1147,33 +1147,55 @@ sub persistent_mode_action {
     #this is the persistent mode to switch to
     my($mode) = shift;
 
+    my($emitted) = 0;
+    my($labels);
+
     return sub {
-        my($button_index) = shift;
+        if (!$emitted) {
+            my($press_label) = unique_label("persistent_mode_press_action");
+            my($release_label) = unique_label("persistent_mode_release_action");
 
-        my($press_label) = unique_label("persistent_mode_press_action");
-        my($release_label) = unique_label("persistent_mode_release_action");
+            emit_sub $press_label, sub {
+                _ldi r16, lo8(press_table_label($mode));
+                _ldi r17, hi8(press_table_label($mode));
 
-        emit_sub $press_label, sub {
-            store_release_pointer($button_index, $release_label);
+                _ldi r18, lo8(pm($release_label));
+                _ldi r19, hi8(pm($release_label));
 
-            #update the press table pointers to point to the nas press table
-            _ldi r16, lo8(press_table_label($mode));
-            _sts current_press_table, r16;
-            _sts persistent_mode_press_table, r16;
-            _ldi r16, hi8(press_table_label($mode));
-            _sts "current_press_table + 1", r16;
-            _sts "persistent_mode_press_table + 1", r16;
+                _rjmp "handle_persistent_mode_press";
+            };
 
-            _ret;
-        };
+            emit_sub $release_label, sub {
+                _ret;
+            };
 
-        emit_sub $release_label, sub {
-            _ret;
-        };
+            $labels = [$release_label, $press_label];
+            $emitted = 1;
+        }
 
-        return [$release_label, $press_label];
+        return $labels;
     }
 }
+
+#handle the press of a persistent mode key
+#r16:r17    the address of the new mode's press table
+#r18:r19    the address for the release routine
+#y          the location in the release table to store the release pointer
+emit_sub "handle_persistent_mode_press", sub {
+    #update the release table
+    _st "y+", r18;
+    _st "y", r19;
+
+    #update the current press table pointer
+    _sts current_press_table, r16;
+    _sts "current_press_table + 1", r17;
+
+    #update the persistent mode press table pointer
+    _sts persistent_mode_press_table, r16;
+    _sts "persistent_mode_press_table + 1", r17;
+
+    _ret;
+};
 
 sub undefined_action {
     return sub {
