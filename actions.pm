@@ -109,98 +109,101 @@ my(@index_map) = (
 
 #maps an action name to a sub that can generate the press and release code for that action
 my(%action_map);
-#generate actions for a-z and A-Z
-for (my($i)=ord("a"); $i<=ord("z"); $i++) {
-    $action_map{chr($i)} = simple_keycode($i - ord("a") + 0x04);
-    $action_map{uc(chr($i))} = modified_keycode($i - ord("a") + 0x04, LSHIFT_OFFSET);
+
+{
+    #generate actions for a-z and A-Z
+    for (my($i)=ord("a"); $i<=ord("z"); $i++) {
+        $action_map{chr($i)} = simple_keycode($i - ord("a") + 0x04);
+        $action_map{uc(chr($i))} = modified_keycode($i - ord("a") + 0x04, LSHIFT_OFFSET);
+    }
+    #generate actions for 1-9
+    for (my($i)=ord("1"); $i<=ord("9"); $i++) {
+        $action_map{chr($i)} = simple_keycode($i - ord("1") + 0x1e);
+    }
+    #0 comes before 1 in ascii, but after 9 in usb's keycodes
+    $action_map{"0"} = simple_keycode(0x27);
+
+    $action_map{"!"} = modified_keycode(0x1e, LSHIFT_OFFSET);
+    $action_map{"@"} = modified_keycode(0x1f, LSHIFT_OFFSET);
+    $action_map{"#"} = modified_keycode(0x20, LSHIFT_OFFSET);
+    $action_map{"\$"} = modified_keycode(0x21, LSHIFT_OFFSET);
+    $action_map{"%"} = modified_keycode(0x22, LSHIFT_OFFSET);
+    $action_map{"^"} = modified_keycode(0x23, LSHIFT_OFFSET);
+    $action_map{"&"} = modified_keycode(0x24, LSHIFT_OFFSET);
+    $action_map{"*"} = modified_keycode(0x25, LSHIFT_OFFSET);
+    $action_map{"("} = modified_keycode(0x26, LSHIFT_OFFSET);
+    $action_map{")"} = modified_keycode(0x27, LSHIFT_OFFSET);
+
+    $action_map{"ret"} = simple_keycode(0x28);
+    $action_map{"esc"} = simple_keycode(0x29);
+    $action_map{"bksp"} = simple_keycode(0x2a);
+    $action_map{"tab"} = simple_keycode(0x2b);
+    $action_map{"sp"} = simple_keycode(0x2c);
+
+    $action_map{"-"} = simple_keycode(0x2d);
+    $action_map{"_"} = modified_keycode(0x2d, LSHIFT_OFFSET);
+    $action_map{"="} = simple_keycode(0x2e);
+    $action_map{"+"} = modified_keycode(0x2e, LSHIFT_OFFSET);
+    $action_map{"["} = simple_keycode(0x2f);
+    $action_map{"{"} = modified_keycode(0x2f, LSHIFT_OFFSET);
+    $action_map{"]"} = simple_keycode(0x30);
+    $action_map{"}"} = modified_keycode(0x30, LSHIFT_OFFSET);
+    $action_map{"\\"} = simple_keycode(0x31);
+    $action_map{"|"} = modified_keycode(0x31, LSHIFT_OFFSET);
+    $action_map{";"} = simple_keycode(0x33);
+    $action_map{":"} = modified_keycode(0x33, LSHIFT_OFFSET);
+    $action_map{"'"} = simple_keycode(0x34);
+    $action_map{"\""} = modified_keycode(0x34, LSHIFT_OFFSET);
+    $action_map{"`"} = simple_keycode(0x35);
+    $action_map{"~"} = modified_keycode(0x35, LSHIFT_OFFSET);
+    $action_map{","} = simple_keycode(0x36);
+    $action_map{"<"} = modified_keycode(0x36, LSHIFT_OFFSET);
+    $action_map{"."} = simple_keycode(0x37);
+    $action_map{">"} = modified_keycode(0x37, LSHIFT_OFFSET);
+    $action_map{"/"} = simple_keycode(0x38);
+    $action_map{"?"} = modified_keycode(0x38, LSHIFT_OFFSET);
+
+    $action_map{"capslock"} = simple_keycode(0x39);
+
+    #generate actions for f1-f12
+    for(my($i)=1; $i<=12; $i++) {
+        $action_map{"f$i"} = simple_keycode(0x3A + $i - 1);
+    }
+
+    $action_map{"printscreen"} = simple_keycode(0x46);
+    $action_map{"scrolllock"} = simple_keycode(0x47);
+    $action_map{"pause"} = simple_keycode(0x48);
+    $action_map{"ins"} = simple_keycode(0x49);
+    $action_map{"home"} = simple_keycode(0x4a);
+    $action_map{"pgup"} = simple_keycode(0x4b);
+    $action_map{"del"} = simple_keycode(0x4c);
+    $action_map{"end"} = simple_keycode(0x4d);
+    $action_map{"pgdn"} = simple_keycode(0x4e);
+    $action_map{"right"} = simple_keycode(0x4f);
+    $action_map{"left"} = simple_keycode(0x50);
+    $action_map{"down"} = simple_keycode(0x51);
+    $action_map{"up"} = simple_keycode(0x52);
+    $action_map{"numlock"} = simple_keycode(0x53);
+    $action_map{"menu"} = simple_keycode(0x65);
+
+    $action_map{"lctrl"} = modifier_keycode(0xe0);
+    $action_map{"lshift"} = modifier_keycode(0xe1);
+    $action_map{"lalt"} = modifier_keycode(0xe2);
+    $action_map{"lgui"} = modifier_keycode(0xe3);
+    $action_map{"rctrl"} = modifier_keycode(0xe4);
+    $action_map{"rshift"} = modifier_keycode(0xe5);
+    $action_map{"ralt"} = modifier_keycode(0xe6);
+    $action_map{"rgui"} = modifier_keycode(0xe7);
+
+    $action_map{"nas"} = temporary_mode_action("nas");
+    $action_map{"naslock"} = persistent_mode_action("nas");
+    $action_map{"func"} = persistent_mode_action("func");
+    $action_map{"norm"} = temporary_mode_action("normal_hold", "normal");
+
+    $action_map{"ctrlx"} = modified_keycode(0x1b, LCTRL_OFFSET);
+    $action_map{"ctrlc"} = modified_keycode(0x06, LCTRL_OFFSET);
+    $action_map{"ctrlv"} = modified_keycode(0x19, LCTRL_OFFSET);
 }
-#generate actions for 1-9
-for (my($i)=ord("1"); $i<=ord("9"); $i++) {
-    $action_map{chr($i)} = simple_keycode($i - ord("1") + 0x1e);
-}
-#0 comes before 1 in ascii, but after 9 in usb's keycodes
-$action_map{"0"} = simple_keycode(0x27);
-
-$action_map{"!"} = modified_keycode(0x1e, LSHIFT_OFFSET);
-$action_map{"@"} = modified_keycode(0x1f, LSHIFT_OFFSET);
-$action_map{"#"} = modified_keycode(0x20, LSHIFT_OFFSET);
-$action_map{"\$"} = modified_keycode(0x21, LSHIFT_OFFSET);
-$action_map{"%"} = modified_keycode(0x22, LSHIFT_OFFSET);
-$action_map{"^"} = modified_keycode(0x23, LSHIFT_OFFSET);
-$action_map{"&"} = modified_keycode(0x24, LSHIFT_OFFSET);
-$action_map{"*"} = modified_keycode(0x25, LSHIFT_OFFSET);
-$action_map{"("} = modified_keycode(0x26, LSHIFT_OFFSET);
-$action_map{")"} = modified_keycode(0x27, LSHIFT_OFFSET);
-
-$action_map{"ret"} = simple_keycode(0x28);
-$action_map{"esc"} = simple_keycode(0x29);
-$action_map{"bksp"} = simple_keycode(0x2a);
-$action_map{"tab"} = simple_keycode(0x2b);
-$action_map{"sp"} = simple_keycode(0x2c);
-
-$action_map{"-"} = simple_keycode(0x2d);
-$action_map{"_"} = modified_keycode(0x2d, LSHIFT_OFFSET);
-$action_map{"="} = simple_keycode(0x2e);
-$action_map{"+"} = modified_keycode(0x2e, LSHIFT_OFFSET);
-$action_map{"["} = simple_keycode(0x2f);
-$action_map{"{"} = modified_keycode(0x2f, LSHIFT_OFFSET);
-$action_map{"]"} = simple_keycode(0x30);
-$action_map{"}"} = modified_keycode(0x30, LSHIFT_OFFSET);
-$action_map{"\\"} = simple_keycode(0x31);
-$action_map{"|"} = modified_keycode(0x31, LSHIFT_OFFSET);
-$action_map{";"} = simple_keycode(0x33);
-$action_map{":"} = modified_keycode(0x33, LSHIFT_OFFSET);
-$action_map{"'"} = simple_keycode(0x34);
-$action_map{"\""} = modified_keycode(0x34, LSHIFT_OFFSET);
-$action_map{"`"} = simple_keycode(0x35);
-$action_map{"~"} = modified_keycode(0x35, LSHIFT_OFFSET);
-$action_map{","} = simple_keycode(0x36);
-$action_map{"<"} = modified_keycode(0x36, LSHIFT_OFFSET);
-$action_map{"."} = simple_keycode(0x37);
-$action_map{">"} = modified_keycode(0x37, LSHIFT_OFFSET);
-$action_map{"/"} = simple_keycode(0x38);
-$action_map{"?"} = modified_keycode(0x38, LSHIFT_OFFSET);
-
-$action_map{"capslock"} = simple_keycode(0x39);
-
-#generate actions for f1-f12
-for(my($i)=1; $i<=12; $i++) {
-    $action_map{"f$i"} = simple_keycode(0x3A + $i - 1);
-}
-
-$action_map{"printscreen"} = simple_keycode(0x46);
-$action_map{"scrolllock"} = simple_keycode(0x47);
-$action_map{"pause"} = simple_keycode(0x48);
-$action_map{"ins"} = simple_keycode(0x49);
-$action_map{"home"} = simple_keycode(0x4a);
-$action_map{"pgup"} = simple_keycode(0x4b);
-$action_map{"del"} = simple_keycode(0x4c);
-$action_map{"end"} = simple_keycode(0x4d);
-$action_map{"pgdn"} = simple_keycode(0x4e);
-$action_map{"right"} = simple_keycode(0x4f);
-$action_map{"left"} = simple_keycode(0x50);
-$action_map{"down"} = simple_keycode(0x51);
-$action_map{"up"} = simple_keycode(0x52);
-$action_map{"numlock"} = simple_keycode(0x53);
-$action_map{"menu"} = simple_keycode(0x65);
-
-$action_map{"ctrlx"} = modified_keycode(0x1b, LCTRL_OFFSET);
-$action_map{"ctrlc"} = modified_keycode(0x06, LCTRL_OFFSET);
-$action_map{"ctrlv"} = modified_keycode(0x19, LCTRL_OFFSET);
-
-$action_map{"lctrl"} = modifier_keycode(0xe0);
-$action_map{"lshift"} = modifier_keycode(0xe1);
-$action_map{"lalt"} = modifier_keycode(0xe2);
-$action_map{"lgui"} = modifier_keycode(0xe3);
-$action_map{"rctrl"} = modifier_keycode(0xe4);
-$action_map{"rshift"} = modifier_keycode(0xe5);
-$action_map{"ralt"} = modifier_keycode(0xe6);
-$action_map{"rgui"} = modifier_keycode(0xe7);
-
-$action_map{"nas"} = temporary_mode_action("nas");
-$action_map{"naslock"} = persistent_mode_action("nas");
-$action_map{"func"} = persistent_mode_action("func");
-$action_map{"norm"} = temporary_mode_action("normal_hold", "normal");
 
 sub generate_key_maps {
     my($key_maps) = shift;
