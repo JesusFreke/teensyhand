@@ -381,3 +381,5 @@ descriptor("DESCRIPTORS",
         "Keyboard Interface"
     )
 );
+
+emit ".align 2\n";
