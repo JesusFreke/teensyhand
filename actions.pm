@@ -374,7 +374,20 @@ emit_sub "send_hid_report", sub {
     #now, we need to send the hid report
     SELECT_EP r17, EP_1;
 
+    #wait up to ~.5s until the endpoint is ready. If it takes longer than that,
+    #we just bail out
+    _clr r24;
+    _clr r25;
+    _ldi r26, 0xf3;
     block {
+        block {
+            _adiw r24, 1;
+            _adc r26, r15_zero;
+
+            _brne block_end;
+            _ret;
+        };
+
         _lds r17, UEINTX;
         _sbrs r17, RWAL;
         _rjmp block_begin;
