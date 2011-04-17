@@ -190,7 +190,7 @@ emit_sub "eor_int", sub {
             _lds $r23_wLength_hi, UEDATX;
 
             #clear the setup interrupt bit
-            _cbr r24, MASK(RXSTPI);
+            _cbr r24, MASK(RXSTPI) | MASK(RXOUTI) | MASK(TXINI);
             _sts UEINTX, r24;
 
             #is it a class request?
