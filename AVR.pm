@@ -149,11 +149,6 @@ sub memory_variable {
     emit ".global $name\n";
     emit "$name:\n";
     emit ".space $size\n";
-
-    {
-        no strict 'refs';
-        *$name = sub () { $name };
-    }
 }
 
 sub emit_sub {

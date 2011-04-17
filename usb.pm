@@ -3,7 +3,7 @@ use strict;
 sub usb_init {
     #initialize hid idle period to 500ms (125*4ms)
     _ldi r16, 125;
-    _sts hid_idle_period, r16;
+    _sts "hid_idle_period", r16;
 
     #enable usb pad regulator and select usb device mode
     _ldi r16, MASK(UIMOD) | MASK(UVREGE);
@@ -403,7 +403,7 @@ emit_sub "eor_int", sub {
                     _cpi $r22_wLength_lo, 0;
                     _breq block_end;
 
-                    _lds r16, current_configuration;
+                    _lds r16, "current_configuration";
                     _sts UEDATX, r16;
                 };
 
@@ -412,7 +412,7 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "setup_set_configuration", sub {
-                _sts current_configuration, $r18_wValue_lo;
+                _sts "current_configuration", $r18_wValue_lo;
 
                 SELECT_EP r16, EP_1;
 
@@ -470,7 +470,7 @@ emit_sub "eor_int", sub {
                     _cpi $r22_wLength_lo, 0;
                     _breq block_end;
 
-                    _lds r16, hid_idle_period;
+                    _lds r16, "hid_idle_period";
                     _sts UEDATX, r16;
                 };
 
@@ -487,7 +487,7 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "hid_set_idle", sub {
-                _sts hid_idle_period, $r19_wValue_hi;
+                _sts "hid_idle_period", $r19_wValue_hi;
                 _rjmp "usb_send_zlp";
             };
 

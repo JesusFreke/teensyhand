@@ -267,8 +267,8 @@ emit_sub "no_action", sub {
 #r16 should contain the keycode to send
 emit_sub "send_keycode_press", sub {
     #find the first 0 in current_report, and store the new keycode there
-    _ldi zl, lo8(current_report);
-    _ldi zh, hi8(current_report);
+    _ldi zl, lo8("current_report");
+    _ldi zh, hi8("current_report");
 
     _mov r24, zl;
     _adiw r24, 0x20;
@@ -303,8 +303,8 @@ emit_sub "send_keycode_press", sub {
 #r16 should contain the keycode to release
 emit_sub "send_keycode_release", sub {
     #find the keycode in current_report, and zero it out
-    _ldi zl, lo8(current_report);
-    _ldi zh, hi8(current_report);
+    _ldi zl, lo8("current_report");
+    _ldi zh, hi8("current_report");
 
     _mov r24, zl;
     _adiw r24, 0x20;
@@ -385,8 +385,8 @@ emit_sub "send_hid_report", sub {
         _rjmp block_begin;
     };
 
-    _ldi zl, lo8(current_report);
-    _ldi zh, hi8(current_report);
+    _ldi zl, lo8("current_report");
+    _ldi zh, hi8("current_report");
 
     _ldi r17, 21;
 
@@ -461,7 +461,7 @@ emit_sub "handle_simple_press", sub {
         _lds r17, "current_report + 20";
 
         #and also grab the physical status
-        _lds r18, modifier_physical_status;
+        _lds r18, "modifier_physical_status";
 
         #check if there are any bits that are 1 in the hid report, but 0 in the physical status
         _com r18;
@@ -530,8 +530,8 @@ emit_sub "handle_modified_press", sub {
         _st "y", r18;
 
         #increment the virtual press counter for this modifier
-        _ldi zl, lo8(modifier_virtual_count);
-        _ldi zh, hi8(modifier_virtual_count);
+        _ldi zl, lo8("modifier_virtual_count");
+        _ldi zh, hi8("modifier_virtual_count");
         _add zl, r19;
         _adc zh, r15_zero;
         _ld r21, "z";
@@ -548,7 +548,7 @@ emit_sub "handle_modified_press", sub {
         _lds r17, "current_report + 20";
 
         #and also grab the physical status
-        _lds r18, modifier_physical_status;
+        _lds r18, "modifier_physical_status";
         #and set the bit for the modifier we just sent
         _or r18, r16;
 
@@ -582,8 +582,8 @@ emit_sub "handle_modified_release", sub {
     _call "send_keycode_release";
 
     #decrement the virtual press counter for the modifier
-    _ldi zl, lo8(modifier_virtual_count);
-    _ldi zh, hi8(modifier_virtual_count);
+    _ldi zl, lo8("modifier_virtual_count");
+    _ldi zh, hi8("modifier_virtual_count");
     _add zl, r10;
     _adc zh, r15_zero;
     _ld r16, "z";
@@ -601,7 +601,7 @@ emit_sub "handle_modified_release", sub {
         _brne block_end;
 
         #check the physical flag
-        _lds r17, modifier_physical_status;
+        _lds r17, "modifier_physical_status";
         _and r17, r11;
         _brne block_end;
 
@@ -653,9 +653,9 @@ emit_sub "handle_modifier_press", sub {
     _st "y", r18;
 
     #set the bit in the modifier_physical_status byte
-    _lds r17, modifier_physical_status;
+    _lds r17, "modifier_physical_status";
     _or r17, r16;
-    _sts modifier_physical_status, r17;
+    _sts "modifier_physical_status", r17;
 
     _jmp "send_modifier_press";
 };
@@ -666,15 +666,15 @@ emit_sub "handle_modifier_press", sub {
 emit_sub "handle_modifier_release", sub {
     block {
         #clear the bit in the modifier_physical_status byte
-        _lds r18, modifier_physical_status;
+        _lds r18, "modifier_physical_status";
         _mov r19, r17;
         _com r19;
         _and r18, r19;
-        _sts modifier_physical_status, r18;
+        _sts "modifier_physical_status", r18;
 
         #don't release the modifier if it's virtual count is still > 0
-        _ldi zl, lo8(modifier_virtual_count);
-        _ldi zh, hi8(modifier_virtual_count);
+        _ldi zl, lo8("modifier_virtual_count");
+        _ldi zh, hi8("modifier_virtual_count");
         _add zl, r16;
         _adc zh, r15_zero;
         _ld r18, "z";
@@ -745,7 +745,7 @@ sub temporary_mode_action {
 #y          the location in the release table to store the release pointer
 emit_sub "handle_temporary_persistent_mode_press", sub {
     #update the persistent mode press table pointer
-    _sts persistent_mode_press_table, r20;
+    _sts "persistent_mode_press_table", r20;
     _sts "persistent_mode_press_table + 1", r21;
 
     #intentional fall-through!
@@ -761,7 +761,7 @@ emit_sub "handle_temporary_mode_press", sub {
     _st "y", r19;
 
     #update the current press table pointer
-    _sts current_press_table, r16;
+    _sts "current_press_table", r16;
     _sts "current_press_table+1", r17;
 
     _ret;
@@ -776,7 +776,7 @@ emit_sub "handle_temporary_mode_release", sub {
         #the nas button, and then presses and hold a different temporary mode button, and
         #then releases the nas button, we don't want to switch back to the persistent mode
         #while the other temporary mode button is being held
-        _lds r18, current_press_table;
+        _lds r18, "current_press_table";
         _cp r18, r16;
         _brne block_end;
 
@@ -785,8 +785,8 @@ emit_sub "handle_temporary_mode_release", sub {
         _brne block_end;
 
         #restore the press table pointer from persistent_mode_press_table
-        _lds r16, persistent_mode_press_table;
-        _sts current_press_table, r16;
+        _lds r16, "persistent_mode_press_table";
+        _sts "current_press_table", r16;
         _lds r16, "persistent_mode_press_table + 1";
         _sts "current_press_table + 1", r16;
     };
@@ -837,11 +837,11 @@ emit_sub "handle_persistent_mode_press", sub {
     _st "y", r19;
 
     #update the current press table pointer
-    _sts current_press_table, r16;
+    _sts "current_press_table", r16;
     _sts "current_press_table + 1", r17;
 
     #update the persistent mode press table pointer
-    _sts persistent_mode_press_table, r16;
+    _sts "persistent_mode_press_table", r16;
     _sts "persistent_mode_press_table + 1", r17;
 
     _ret;

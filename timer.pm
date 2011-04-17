@@ -77,8 +77,8 @@ emit_global_sub "t3_int", sub {
 
     #check for button presses/releases
     block {
-        _ldi zl, lo8(button_states);
-        _ldi zh, hi8(button_states);
+        _ldi zl, lo8("button_states");
+        _ldi zh, hi8("button_states");
         _add zl, $r17_descriptor;
         _adc zh, r15_zero;
 
@@ -117,11 +117,11 @@ emit_global_sub "t3_int", sub {
                 _bst $r16_button_states, $i;
                 _bld r19, 7;
 
-                _ldi zh, hi8(button_event_queue);
+                _ldi zh, hi8("button_event_queue");
 
                 #grab the tail and head, and make sure there's room in the queue
-                _lds zl, button_event_tail;
-                _lds r20, button_event_head;
+                _lds zl, "button_event_tail";
+                _lds r20, "button_event_head";
                 _dec r20;
 
                 block {
@@ -132,7 +132,7 @@ emit_global_sub "t3_int", sub {
                 };
 
                 _st "z+", r19;
-                _sts button_event_tail, zl;
+                _sts "button_event_tail", zl;
             };
         }
     };

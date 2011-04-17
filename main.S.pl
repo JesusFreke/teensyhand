@@ -180,8 +180,8 @@ emit_global_sub "main", sub {
 
     #initialize the press tables
     _ldi r16, lo8(press_table_label("normal"));
-    _sts current_press_table, r16;
-    _sts persistent_mode_press_table, r16;
+    _sts "current_press_table", r16;
+    _sts "persistent_mode_press_table", r16;
 
     _ldi r16, hi8(press_table_label("normal"));
     _sts "current_press_table + 1", r16;
@@ -203,16 +203,16 @@ sub dequeue_input_event {
     block {
         _cli;
 
-        _ldi zh, hi8(button_event_queue);
-        _lds zl, button_event_head;
-        _lds r16, button_event_tail;
+        _ldi zh, hi8("button_event_queue");
+        _lds zl, "button_event_head";
+        _lds r16, "button_event_tail";
 
         block {
             _cp zl, r16;
             _breq block_end;
 
             _ld r16, "z+";
-            _sts button_event_head, zl;
+            _sts "button_event_head", zl;
             _sei;
             _rjmp block_end parent;
         };
@@ -239,8 +239,8 @@ sub process_input_event {
                 _rjmp block_end;
 
                 #it's a release event. Load the handler address from the release table
-                _ldi zl, lo8(release_table);
-                _ldi zh, hi8(release_table);
+                _ldi zl, lo8("release_table");
+                _ldi zh, hi8("release_table");
                 _add zl, r17;
                 _adc zh, r15_zero;
                 _ld r18, "z+";
@@ -251,12 +251,12 @@ sub process_input_event {
             };
 
             #it's a press event. Load the address for the current press table
-            _lds zl, current_press_table;
+            _lds zl, "current_press_table";
             _lds zh, "current_press_table+1";
 
             #calculate and store the location in the release table, based on button index
-            _ldi yl, lo8(release_table);
-            _ldi yh, hi8(release_table);
+            _ldi yl, lo8("release_table");
+            _ldi yh, hi8("release_table");
             _add yl, r17;
             _adc yh, r15_zero;
 
