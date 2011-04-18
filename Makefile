@@ -39,7 +39,9 @@ clean:
 
 install: $(MODULE).hex
 	@echo install: waiting for device...
-	@dfu-programmer at90usb1286 flash $(MODULE).hex > /dev/null
+	@tools/reboot_dfu.pl || exit 0
+	@sleep 2
+	@dfu-programmer at90usb1286 flash $(MODULE).hex
 	@dfu-programmer at90usb1286 start || exit 0
 
 
