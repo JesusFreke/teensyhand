@@ -88,10 +88,10 @@ use constant LED_NAS => 0;
 use constant LED_NORMAL => 1;
 use constant LED_FUNC => 2;
 use constant LED_10K => 3;
-use constant LED_CAPS => 4;
+use constant LED_CAPS_LOCK => 4;
 use constant LED_MOUSE => 5;
-use constant LED_NUMLOCK => 6;
-use constant LED_SCROLLLOCK => 7;
+use constant LED_NUM_LOCK => 6;
+use constant LED_SCROLL_LOCK => 7;
 
 do "descriptors.pm";
 die $@ if ($@);

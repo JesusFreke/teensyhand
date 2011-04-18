@@ -1,5 +1,9 @@
 use strict;
 
+use constant HID_LED_NUM_LOCK => 0;
+use constant HID_LED_CAPS_LOCK => 1;
+use constant HID_LED_SCROLL_LOCK => 2;
+
 sub usb_init {
     #initialize hid idle period to 500ms (125*4ms)
     _ldi r16, 125;
@@ -489,7 +493,40 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "hid_set_report", sub {
-                _rjmp "usb_stall";
+                block {
+                    _lds r16, UEINTX;
+                    _sbrs r16, RXOUTI;
+                    _rjmp block_begin;
+                };
+
+                _in r16, IO(PORTC);
+                _ori r16, LH_LED_MASK;
+
+                _lds r17, UEDATX;
+                #invert the values, to match the "0 is on" logic of the LEDs
+                _com r17;
+
+                #translate the hid led bits to the corresponding bits in PORTC
+                _bst r17, HID_LED_NUM_LOCK;
+                _bld r16, LED_NUM_LOCK;
+
+                _bst r17, HID_LED_CAPS_LOCK;
+                _bld r16, LED_CAPS_LOCK;
+
+                _bst r17, HID_LED_SCROLL_LOCK;
+                _bld r16, LED_SCROLL_LOCK;
+
+                _out IO(PORTC), r16;
+
+                #acknowledge receipt of data
+                _cbr r16, MASK(RXOUTI);
+                _sts UEINTX, r16;
+
+                #send zlp
+                _cbr r16, MASK(TXINI);
+                _sts UEINTX, r16;
+
+                _rjmp "usb_enp_end";
             };
 
             emit_sub "hid_set_idle", sub {

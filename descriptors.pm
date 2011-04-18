@@ -26,6 +26,7 @@ use constant ENDPOINT_TYPE_INTERRUPT => 0x03;
 #Usage pages
 use constant HID_USAGE_PAGE_GENERIC_DESKTOP => 0x01;
 use constant HID_USAGE_PAGE_KEYBOARD => 0x07;
+use constant HID_USAGE_PAGE_LEDS => 0x08;
 
 #Generic desktop usages
 use constant HID_USAGE_GENERIC_DESKTOP_KEYBOARD => 0x06;
@@ -363,6 +364,43 @@ descriptor("DESCRIPTORS",
             #Input item (variable)
             byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_INPUT),
             byte(MAIN_ITEM_VARIABLE),
+
+            #------------LEDs---------
+            #Usage page - LEDs
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_USAGE_PAGE),
+            byte(HID_USAGE_PAGE_LEDS),
+
+            #Report size
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_SIZE),
+            byte(0x01),
+
+            #Report count - 3
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_COUNT),
+            byte(0x03),
+
+            #Usage minimum
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_LOCAL | LOCAL_ITEM_USAGE_MINIMUM),
+            byte(0x01),
+
+            #Usage maximum
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_LOCAL | LOCAL_ITEM_USAGE_MAXIMUM),
+            byte(0x03),
+
+            #Output item (variable)
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_OUTPUT),
+            byte(MAIN_ITEM_VARIABLE),
+
+            #------------Padding for led byte---------
+            #Report size
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_SIZE),
+            byte(0x01),
+
+            #Report count - 5
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_COUNT),
+            byte(0x05),
+
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_OUTPUT),
+            byte(MAIN_ITEM_CONSTANT),
 
         #End application collection
         byte(HID_ITEM_DATA_SIZE_0 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_END_COLLECTION)
