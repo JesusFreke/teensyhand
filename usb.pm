@@ -244,11 +244,18 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "handle_vendor_packet", sub {
-                _ldi r24, 0x01;
-                _cpse $r17_bRequest, r24;
-                _rjmp "usb_stall";
+                block {
+                    _cpi $r17_bRequest, 0x01;
+                    _brne block_end;
+                    _rjmp "vendor_get_memory";
+                };
+                block {
+                    _cpi $r17_bRequest, 0x02;
+                    _brne block_end;
+                    _rjmp "vendor_start_bootloader";
+                };
 
-                _rjmp "vendor_get_memory";
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_get_status", sub {
@@ -558,6 +565,51 @@ emit_sub "eor_int", sub {
                     _rjmp "usb_send_memory_data_short";
                 };
                 _rjmp "usb_enp_end";
+            };
+
+            emit_sub "vendor_start_bootloader", sub {
+                _cli;
+
+                #disable usb
+                _ldi r16, 1;
+                _sts UDCON, r16;
+
+                _ldi r16, MASK(FRZCLK);
+                _sts USBCON, r16;
+
+                #wait for 5ms after usb reset
+                _ldi r24, 0x13;
+                _ldi r25, 0x13;
+                block {
+                    _sbiw r24, 1;
+                    _brne block_begin;
+                };
+
+                #disable timer 1
+                _sts TCCR1B, r15_zero;
+                _sts TIMSK1, r15_zero;
+
+                #disable timer 3
+                _sts TCCR3B, r15_zero;
+                _sts TIMSK3, r15_zero;
+
+                #clear out port configurations
+                _sts DDRA, r15_zero;
+                _sts DDRB, r15_zero;
+                _sts DDRC, r15_zero;
+                _sts DDRD, r15_zero;
+                _sts DDRE, r15_zero;
+                _sts DDRF, r15_zero;
+
+                _sts PORTA, r15_zero;
+                _sts PORTB, r15_zero;
+                _sts PORTC, r15_zero;
+                _sts PORTD, r15_zero;
+                _sts PORTE, r15_zero;
+                _sts PORTF, r15_zero;
+
+                #jump to the bootloader
+                _jmp 0xF800;
             };
         };
     };

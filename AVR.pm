@@ -302,7 +302,7 @@ use constant DDRD => 0x2a;
 use constant PORTD => 0x2b;
 
 use constant PINE => 0x2c;
-use constant DDR => 0x2d;
+use constant DDRE => 0x2d;
 use constant PORTE => 0x2e;
 
 use constant PINF => 0x2f;
