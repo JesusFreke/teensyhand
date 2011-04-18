@@ -55,6 +55,9 @@ BEGIN {
     #to after a temporary mode switch (i.e. the nas button)
     memory_variable "persistent_mode_press_table", 2;
 
+    #The LED state associated with the persistent mode
+    memory_variable "persistent_mode_leds", 1;
+
     #This contains a 2-byte entry for each button, which is the address of a routine to
     #execute when the button is released. The entry for a button is updated when the button
     #is pressed, to reflect the correct routine to use when it is released
@@ -78,6 +81,17 @@ use constant RCTRL_OFFSET => 4;
 use constant RSHIFT_OFFSET => 5;
 use constant RALT_OFFSET => 6;
 use constant RGUI_OFFSET => 7;
+
+use constant RH_LED_MASK => 0b00001111;
+use constant LH_LED_MASK => 0b11110000;
+use constant LED_NAS => 0;
+use constant LED_NORMAL => 1;
+use constant LED_FUNC => 2;
+use constant LED_10K => 3;
+use constant LED_CAPS => 4;
+use constant LED_MOUSE => 5;
+use constant LED_NUMLOCK => 6;
+use constant LED_SCROLLLOCK => 7;
 
 do "descriptors.pm";
 die $@ if ($@);
@@ -151,6 +165,7 @@ emit_global_sub "main", sub {
     CONFIGURE_GPIO(port=>GPIO_PORT_F, pin=>PIN_6, dir=>GPIO_DIR_IN, pullup=>GPIO_PULLUP_ENABLED);
     CONFIGURE_GPIO(port=>GPIO_PORT_F, pin=>PIN_7, dir=>GPIO_DIR_IN, pullup=>GPIO_PULLUP_ENABLED);
 
+
     #initialize register with commonly used "zero" value
     _clr r15_zero;
 
@@ -186,6 +201,11 @@ emit_global_sub "main", sub {
     _ldi r16, hi8(press_table_label("normal"));
     _sts "current_press_table + 1", r16;
     _sts "persistent_mode_press_table + 1", r16;
+
+    #initialize LEDs
+    _ldi r16, INVERSE_MASK(LED_NORMAL);
+    _out IO(PORTC), r16;
+    _sts "persistent_mode_leds", r16;
 
     block {
         #wait for an input event and dequeue it

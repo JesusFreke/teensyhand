@@ -68,6 +68,7 @@ BEGIN {
         "mov",
         "movw",
         "or",
+        "ori",
         "out",
         "push",
         "pop",
@@ -498,6 +499,10 @@ sub MAKE_8BIT {
 
 sub MASK {
     return 1 << $_[0];
+}
+
+sub INVERSE_MASK {
+    return ~(1 << $_[0]) & 0xFF;
 }
 
 sub SET_CLOCK_SPEED {

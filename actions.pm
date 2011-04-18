@@ -195,10 +195,10 @@ my(%action_map);
     $action_map{"ralt"} = modifier_keycode(0xe6);
     $action_map{"rgui"} = modifier_keycode(0xe7);
 
-    $action_map{"nas"} = temporary_mode_action("nas");
-    $action_map{"naslock"} = persistent_mode_action("nas");
-    $action_map{"func"} = persistent_mode_action("func");
-    $action_map{"norm"} = temporary_mode_action("normal_hold", "normal");
+    $action_map{"nas"} = temporary_mode_action("nas", INVERSE_MASK(LED_NAS));
+    $action_map{"naslock"} = persistent_mode_action("nas", INVERSE_MASK(LED_NAS));
+    $action_map{"func"} = persistent_mode_action("func", INVERSE_MASK(LED_FUNC));
+    $action_map{"norm"} = temporary_mode_action("normal_hold", INVERSE_MASK(LED_NORMAL) & INVERSE_MASK(LED_10K) , "normal", INVERSE_MASK(LED_NORMAL));
 
     $action_map{"ctrlx"} = modified_keycode(0x1b, LCTRL_OFFSET);
     $action_map{"ctrlc"} = modified_keycode(0x06, LCTRL_OFFSET);
@@ -687,12 +687,14 @@ emit_sub "handle_modifier_release", sub {
 sub temporary_mode_action {
     #this is the temporary mode that will be in effect only while this key is pressed
     my($mode) = shift;
+    my($mode_led_mask) = shift;
 
     #we can optionally change the persistent mode - that is, the mode that will become
     #active once the key for the temporary mode is released
     #This is used to implement, for example, the extra mode used when holding down the
     #normal mode key, for left-hand ctrl+c,v,z shortcuts
     my($persistent_mode) = shift;
+    my($persistent_mode_led_mask) = shift;
 
     my($emitted) = 0;
     my($labels);
@@ -709,9 +711,13 @@ sub temporary_mode_action {
                 _ldi r18, lo8(pm($release_label));
                 _ldi r19, hi8(pm($release_label));
 
+                _ldi r22, $mode_led_mask;
+
                 if ($persistent_mode) {
                     _ldi r20, lo8(press_table_label($persistent_mode));
                     _ldi r21, hi8(press_table_label($persistent_mode));
+
+                    _ldi r23, $persistent_mode_led_mask;
 
                     _rjmp "handle_temporary_persistent_mode_press";
                 } else {
@@ -738,11 +744,16 @@ sub temporary_mode_action {
 #r16:r17    the address of the temporary mode's press table
 #r18:r19    the address for the release routine
 #r20:r21    the address of the persistent mode's press table
+#r22        the led mask for the temporary mode (0s indicate a lighted LED)
+#r23        the led mask for the persistent mode (0s indicate a lighted LED)
 #y          the location in the release table to store the release pointer
 emit_sub "handle_temporary_persistent_mode_press", sub {
     #update the persistent mode press table pointer
     _sts "persistent_mode_press_table", r20;
     _sts "persistent_mode_press_table + 1", r21;
+
+    #update the persistent mode leds
+    _sts "persistent_mode_leds", r23;
 
     #intentional fall-through!
 };
@@ -750,6 +761,8 @@ emit_sub "handle_temporary_persistent_mode_press", sub {
 #handle the press of a temporary mode key
 #r16:r17    the address of the temporary mode's press table
 #r18:r19    the address for the release routine
+#r22        the led mask for the temporary mode (0s indicate a lighted LED)
+#r23        the led mask for the persistent mode (0s indicate a lighted LED)
 #y          the location in the release table to store the release pointer
 emit_sub "handle_temporary_mode_press", sub {
     #update the release table
@@ -759,6 +772,14 @@ emit_sub "handle_temporary_mode_press", sub {
     #update the current press table pointer
     _sts "current_press_table", r16;
     _sts "current_press_table+1", r17;
+
+    #update the LEDs
+    _in r16, IO(PORTC);
+    _ori r16, RH_LED_MASK;
+    #make sure we don't include any LH leds
+    _ori r22, LH_LED_MASK;
+    _and r16, r22;
+    _out IO(PORTC), r16;
 
     _ret;
 };
@@ -785,6 +806,15 @@ emit_sub "handle_temporary_mode_release", sub {
         _sts "current_press_table", r16;
         _lds r16, "persistent_mode_press_table + 1";
         _sts "current_press_table + 1", r16;
+
+        #restore the LEDs from persistent_mode_leds
+        _in r16, IO(PORTC);
+        _lds r17, "persistent_mode_leds";
+        _ori r16, RH_LED_MASK;
+        #make sure we don't include any LH leds
+        _ori r17, LH_LED_MASK;
+        _and r16, r17;
+        _out IO(PORTC), r16;
     };
     _ret;
 };
@@ -792,6 +822,7 @@ emit_sub "handle_temporary_mode_release", sub {
 sub persistent_mode_action {
     #this is the persistent mode to switch to
     my($mode) = shift;
+    my($mode_led_mask) = shift;
 
     my($emitted) = 0;
     my($labels);
@@ -807,6 +838,8 @@ sub persistent_mode_action {
 
                 _ldi r18, lo8(pm($release_label));
                 _ldi r19, hi8(pm($release_label));
+
+                _ldi r20, $mode_led_mask;
 
                 _rjmp "handle_persistent_mode_press";
             };
@@ -826,6 +859,7 @@ sub persistent_mode_action {
 #handle the press of a persistent mode key
 #r16:r17    the address of the new mode's press table
 #r18:r19    the address for the release routine
+#r20        the led mask for the new mode (0s indicate a lighted LED)
 #y          the location in the release table to store the release pointer
 emit_sub "handle_persistent_mode_press", sub {
     #update the release table
@@ -839,6 +873,17 @@ emit_sub "handle_persistent_mode_press", sub {
     #update the persistent mode press table pointer
     _sts "persistent_mode_press_table", r16;
     _sts "persistent_mode_press_table + 1", r17;
+
+    #update the LEDs
+    _in r16, IO(PORTC);
+    _ori r16, RH_LED_MASK;
+    #make sure we don't include any LH leds
+    _ori r20, LH_LED_MASK;
+    _and r16, r20;
+    _out IO(PORTC), r16;
+
+    #store the led state in persistent_mode_leds
+    _sts "persistent_mode_leds", r20;
 
     _ret;
 };
