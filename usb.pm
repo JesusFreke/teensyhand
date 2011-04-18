@@ -507,7 +507,6 @@ emit_sub "eor_int", sub {
                 my($r22_data_len) = "r22";
 
                 block {
-                    _sts PORTC, r15_zero;
                     _cpi $r16_bmRequestType, 0b11000000;
                     _brne block_end;
 
