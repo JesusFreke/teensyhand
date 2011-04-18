@@ -261,9 +261,9 @@ sub generate_key_maps {
 #adds a keycode to the hid report and sends it
 #r16 should contain the keycode to send
 emit_sub "send_keycode_press", sub {
-    #find the first 0 in current_report, and store the new keycode there
-    _ldi zl, lo8("current_report");
-    _ldi zh, hi8("current_report");
+    #find the first 0 in the button array in current_report, and store the new keycode there
+    _ldi zl, lo8("current_report+1");
+    _ldi zh, hi8("current_report+1");
 
     _mov r24, zl;
     _adiw r24, 0x20;
@@ -297,9 +297,9 @@ emit_sub "send_keycode_press", sub {
 #sends a simple, non-modified key release
 #r16 should contain the keycode to release
 emit_sub "send_keycode_release", sub {
-    #find the keycode in current_report, and zero it out
-    _ldi zl, lo8("current_report");
-    _ldi zh, hi8("current_report");
+    #find the keycode in button array in current_report, and zero it out
+    _ldi zl, lo8("current_report + 1");
+    _ldi zh, hi8("current_report + 1");
 
     _mov r24, zl;
     _adiw r24, 0x20;
@@ -333,14 +333,14 @@ emit_sub "send_modifier_press", sub {
     #first, check if the modifier key is already pressed
     block {
         #grab the modifier byte from the hid report and check if the modifier is already pressed
-        _lds r17, "current_report + 20";
+        _lds r17, "current_report";
         _mov r18, r17;
         _and r17, r16;
         _brne block_end;
 
         #set the modifier bit and store it
         _or r18, r16;
-        _sts "current_report + 20", r18;
+        _sts "current_report", r18;
 
         _rjmp "send_hid_report";
     };
@@ -354,7 +354,7 @@ emit_sub "send_modifier_press", sub {
 emit_sub "send_modifier_release", sub {
     block {
         #check if the modifier is actually pressed
-        _lds r17, "current_report + 20";
+        _lds r17, "current_report";
         _mov r18, r17;
         _and r17, r16;
         _breq block_end;
@@ -362,7 +362,7 @@ emit_sub "send_modifier_release", sub {
         #clear the modifier bit
         _com r16;
         _and r18, r16;
-        _sts "current_report + 20", r18;
+        _sts "current_report", r18;
 
         _rjmp "send_hid_report";
     };
@@ -454,7 +454,7 @@ emit_sub "handle_simple_press", sub {
         #if so, we need to release the virtual modifier before sending the keycode
 
         #grab the modifier byte from the hid report
-        _lds r17, "current_report + 20";
+        _lds r17, "current_report";
 
         #and also grab the physical status
         _lds r18, "modifier_physical_status";
@@ -469,7 +469,7 @@ emit_sub "handle_simple_press", sub {
         #otherwise, we need to clear the virtual modifiers and send a report
         _com r18;
         _and r17, r18;
-        _sts "current_report + 20", r17;
+        _sts "current_report", r17;
         _call "send_hid_report";
     };
     _rjmp "send_keycode_press";
@@ -541,7 +541,7 @@ emit_sub "handle_modified_press", sub {
         #if so, we need to release them before sending the keycode
 
         #grab the modifier byte from the hid report
-        _lds r17, "current_report + 20";
+        _lds r17, "current_report";
 
         #and also grab the physical status
         _lds r18, "modifier_physical_status";
@@ -558,7 +558,7 @@ emit_sub "handle_modified_press", sub {
         #otherwise, we need to clear the virtual modifiers and send a report
         _com r18;
         _and r17, r18;
-        _sts "current_report + 20", r17;
+        _sts "current_report", r17;
         _call "send_hid_report";
     };
 

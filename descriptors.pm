@@ -306,41 +306,11 @@ descriptor("DESCRIPTORS",
         #Application collection item
         byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_COLLECTION),
         byte(MAIN_ITEM_COLLECTION_APPLICATION),
-
-            #-----------Button Array----------
-            #Report size
-            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_SIZE),
-            byte(0x08),
-
-            #Report count - support up to 20 simultaneous buttons at once
-            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_COUNT),
-            byte(0x14),
-
-            #Logical minimum
-            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_LOGICAL_MINIMUM),
-            byte(0x00),
-
-            #Logical maximum
-            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_LOGICAL_MAXIMUM),
-            byte(0xDD),
-
+            #------------Modifier List---------
             #Usage page - Keyboard
             byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_USAGE_PAGE),
             byte(HID_USAGE_PAGE_KEYBOARD),
 
-            #Usage minimum
-            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_LOCAL | LOCAL_ITEM_USAGE_MINIMUM),
-            byte(0x00),
-
-            #Usage maximum
-            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_LOCAL | LOCAL_ITEM_USAGE_MAXIMUM),
-            byte(0xDD),
-
-            #Input item (array)
-            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_INPUT),
-            byte(0x00),
-
-            #------------Modifier List---------
             #Report size
             byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_SIZE),
             byte(0x01),
@@ -348,6 +318,10 @@ descriptor("DESCRIPTORS",
             #Report count - support up to 20 simultaneous buttons at once
             byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_COUNT),
             byte(0x08),
+
+            #Logical minimum
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_LOGICAL_MINIMUM),
+            byte(0x00),
 
             #Logical maximum
             byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_LOGICAL_MAXIMUM),
@@ -364,6 +338,31 @@ descriptor("DESCRIPTORS",
             #Input item (variable)
             byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_INPUT),
             byte(MAIN_ITEM_VARIABLE),
+
+            #-----------Button Array----------
+            #Report size
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_SIZE),
+            byte(0x08),
+
+            #Report count - support up to 20 simultaneous buttons at once
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_COUNT),
+            byte(0x14),
+
+            #Logical maximum
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_LOGICAL_MAXIMUM),
+            byte(0xDD),
+
+            #Usage minimum
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_LOCAL | LOCAL_ITEM_USAGE_MINIMUM),
+            byte(0x00),
+
+            #Usage maximum
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_LOCAL | LOCAL_ITEM_USAGE_MAXIMUM),
+            byte(0xDD),
+
+            #Input item (array)
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_INPUT),
+            byte(0x00),
 
             #------------LEDs---------
             #Usage page - LEDs
