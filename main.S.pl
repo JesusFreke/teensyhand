@@ -171,6 +171,10 @@ emit_global_sub "main", sub {
     CONFIGURE_GPIO(port=>GPIO_PORT_F, pin=>PIN_6, dir=>GPIO_DIR_IN, pullup=>GPIO_PULLUP_ENABLED);
     CONFIGURE_GPIO(port=>GPIO_PORT_F, pin=>PIN_7, dir=>GPIO_DIR_IN, pullup=>GPIO_PULLUP_ENABLED);
 
+    #clear all LEDs
+    _ldi r16, 0xFF;
+    _out IO(PORTC), r16;
+    _sts "persistent_mode_leds", r16;
 
     #initialize register with commonly used "zero" value
     _clr r15_zero;
@@ -208,10 +212,20 @@ emit_global_sub "main", sub {
     _sts "current_press_table + 1", r16;
     _sts "persistent_mode_press_table + 1", r16;
 
-    #initialize LEDs
-    _ldi r16, INVERSE_MASK(LED_NORMAL);
-    _out IO(PORTC), r16;
-    _sts "persistent_mode_leds", r16;
+    #wait until usb is configured
+    block {
+        _lds r16, "current_configuration";
+        _cpi r16, 0;
+        _breq block_begin;
+    };
+
+    #wait for another 5ms, just to be sure
+    _ldi r24, 0x13;
+    _ldi r25, 0x13;
+    block {
+        _sbiw r24, 1;
+        _brne block_begin;
+    };
 
     block {
         #wait for an input event and dequeue it

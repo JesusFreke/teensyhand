@@ -496,6 +496,11 @@ emit_sub "sof_int", sub {
                 _ldi r16, EPSIZE_32 | EPBANK_SINGLE | MASK(ALLOC);
                 _sts UECFG1X, r16;
 
+                #initialize LEDs
+                _ldi r16, INVERSE_MASK(LED_NORMAL);
+                _out IO(PORTC), r16;
+                _sts "persistent_mode_leds", r16;
+
                 #re-select ep0
                 SELECT_EP r16, EP_0;
 
