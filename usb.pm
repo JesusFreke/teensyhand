@@ -125,7 +125,7 @@ emit_sub "eor_int", sub {
         _lds r16, SREG;
         _push r16;
 
-        _lds r16, UEINTX;
+        _lds r16, UENUM;
         _push r16;
 
         #check for endpoints with interrupts
