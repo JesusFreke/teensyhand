@@ -36,7 +36,7 @@ sub usb_init {
     _sts UDCON, r16;
 
     #enable end of reset interrupt
-    _ldi r16, MASK(EORSTE);
+    _ldi r16, MASK(EORSTE) | MASK(SOFE);
     _sts UDIEN, r16;
 }
 
@@ -68,16 +68,37 @@ sub USB_SEND_ZLP {
 
 emit_global_sub "usb_gen", sub {
     _push r16;
+    _push r17;
+
+    _lds r16, SREG;
+    _push r16;
+
+    _lds r16, UENUM;
+    _push r16;
+
 
     #check for End of Reset interrupt
     _lds r16, UDINT;
     _sbrc r16, EORSTI;
     _call "eor_int";
 
+    #check for Start of Frame interrupt
+    _lds r16, UDINT;
+    _sbrc r16, SOFI;
+    _call "sof_int";
+
     #clear USB device interrupts
     _ldi r16, 0;
     _sts UDINT, r16;
 
+
+    _pop r16;
+    _sts UENUM, r16;
+
+    _pop r16;
+    _sts SREG, r16;
+
+    _pop r17;
     _pop r16;
     _reti;
 };
@@ -101,6 +122,35 @@ emit_sub "eor_int", sub {
     _ldi r16, MASK(RXSTPE);
     _sts UEIENX, r16;
 
+    #initialize the idle rate to 500ms
+    _ldi r16, 0xF4;
+    _sts "hid_idle_period", r16;
+    _sts "hid_idle_ms_remaining", r16;
+
+    _ldi r16, 0x01;
+    _sts "hid_idle_period + 1", r16;
+    _sts "hid_idle_ms_remaining + 1", r16;
+
+    _ret;
+};
+
+#this occurs when we receiver a usb start of frame packet, which occurs reliably every 1ms
+#we use this to time the hid idle period
+emit_sub "sof_int", sub {
+    block {
+        _lds r16, "hid_idle_ms_remaining";
+        _lds r17, "hid_idle_ms_remaining + 1";
+
+        _cp r16, r15_zero;
+        _cpc r17, r15_zero;
+        _breq block_end;
+
+        _subi r16, 0x01;
+        _sbci r17, 0x00;
+
+        _sts "hid_idle_ms_remaining", r16;
+        _sts "hid_idle_ms_remaining + 1", r17;
+    };
     _ret;
 };
 
@@ -492,6 +542,14 @@ emit_sub "eor_int", sub {
                     _breq block_end;
 
                     _lds r16, "hid_idle_period";
+                    _lds r17, "hid_idle_period + 1";
+
+                    _lsr r17;
+                    _ror r16;
+
+                    _lsr r17;
+                    _ror r16;
+
                     _sts UEDATX, r16;
                 };
 
@@ -541,7 +599,22 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "hid_set_idle", sub {
-                _sts "hid_idle_period", $r19_wValue_hi;
+                #the high byte of wValue contains the new idle period, in 4ms increments
+                _mov r23, $r19_wValue_hi;
+                _clr r24;
+
+                _lsl r23;
+                _rol r24;
+
+                _lsl r23;
+                _rol r24;
+
+                _sts "hid_idle_period", r23;
+                _sts "hid_idle_ms_remaining", r23;
+
+                _sts "hid_idle_period + 1", r24;
+                _sts "hid_idle_ms_remaining + 1", r24;
+
                 _rjmp "usb_send_zlp";
             };
 

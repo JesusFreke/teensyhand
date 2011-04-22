@@ -51,6 +51,7 @@ BEGIN {
         "clt",
         "com",
         "cp",
+        "cpc",
         "cpi",
         "cpse",
         "dec",
@@ -66,6 +67,7 @@ BEGIN {
         "lds",
         "lpm",
         "lsl",
+        "lsr",
         "mov",
         "movw",
         "or",
@@ -76,6 +78,9 @@ BEGIN {
         "ret",
         "reti",
         "rjmp",
+        "rol",
+        "ror",
+        "sbci",
         "sbi",
         "sbic",
         "sbis",
@@ -89,6 +94,7 @@ BEGIN {
         "st",
         "sts",
         "sub",
+        "subi",
         "swap"
     );
 

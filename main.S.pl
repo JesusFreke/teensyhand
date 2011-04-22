@@ -27,7 +27,12 @@ BEGIN {
 
     #done in begin section, so that declared constants can be accessed further down
     memory_variable "current_configuration";
-    memory_variable "hid_idle_period";
+
+    #the current idle period, in ms
+    memory_variable "hid_idle_period", 2;
+
+    #the number of ms until the hid idle period expires and we have to re-send a report
+    memory_variable "hid_idle_ms_remaining", 2;
 
     #contains the button states for each selector value
     #the button states are stored in the low nibble of each byte.
@@ -107,6 +112,7 @@ die $@ if ($@);
 
 sub dequeue_input_event;
 sub process_input_event;
+sub process_hid_idle;
 
 emit_global_sub "main", sub {
     SET_CLOCK_SPEED r16, CLOCK_DIV_1;
@@ -218,6 +224,8 @@ emit_global_sub "main", sub {
             process_input_event;
         };
 
+        process_hid_idle;
+
         #and do it all over again
         _rjmp block_begin;
     };
@@ -298,6 +306,28 @@ sub process_input_event {
         };
 
         _icall;
+    };
+}
+
+sub process_hid_idle {
+    block {
+        #first, check if the idle period is enabled
+        _lds r16, "hid_idle_period";
+        _lds r17, "hid_idle_period + 1";
+
+        _cp r16, r15_zero;
+        _cpc r17, r15_zero;
+        _breq block_end;
+
+        #next, check if the current idle period has elapsed
+        _lds r16, "hid_idle_ms_remaining";
+        _lds r17, "hid_idle_ms_remaining + 1";
+
+        _cp r16, r15_zero;
+        _cpc r17, r15_zero;
+        _breq block_end;
+
+        _call "send_hid_report";
     };
 }
 

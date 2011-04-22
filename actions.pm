@@ -393,6 +393,13 @@ emit_sub "send_hid_report", sub {
         _rjmp block_begin;
     };
 
+    #reset the hid idle period
+    _lds r3, "hid_idle_period";
+    _sts "hid_idle_ms_remaining", r3;
+
+    _lds r3, "hid_idle_period + 1";
+    _sts "hid_idle_ms_remaining + 1", r3;
+
     _ldi zl, lo8("current_report");
     _ldi zh, hi8("current_report");
 
