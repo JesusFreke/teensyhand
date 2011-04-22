@@ -245,7 +245,7 @@ descriptor("DESCRIPTORS",
 		byte 0x00,          #bDeviceClass
 		byte 0x00,          #bDeviceSubClass
 		byte 0x00,          #bDeviceProtocol
-		byte 0x40,          #bMaxPacketSize
+		byte 0x08,          #bMaxPacketSize
 		word 0xFEED,        #idVendor
 		word 0xFACE,        #idVendor
 		word 0xF00D,        #bcdDevice

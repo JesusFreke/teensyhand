@@ -94,7 +94,7 @@ emit_sub "eor_int", sub {
     _ldi r16, EPTYPE_CONTROL | EPDIR_OUT;
     _sts UECFG0X, r16;
 
-    _ldi r16, EPSIZE_64 | EPBANK_SINGLE | MASK(ALLOC);
+    _ldi r16, EPSIZE_8 | EPBANK_SINGLE | MASK(ALLOC);
     _sts UECFG1X, r16;
 
     #enable setup packet interrupt
@@ -139,7 +139,7 @@ emit_sub "eor_int", sub {
             SELECT_EP r16, EP_0;
 
             #setup max_packet_length shared register
-            _ldi r16, 0x40;
+            _ldi r16, 0x08;
             _mov $r10_max_packet_length, r16;
 
             _rjmp "handle_setup_packet";
