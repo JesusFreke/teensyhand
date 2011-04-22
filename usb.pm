@@ -108,6 +108,7 @@ emit_sub "eor_int", sub {
     my($r10_max_packet_length) = "r10";
 
     emit_global_sub "usb_enp", sub {
+        _push r10;
         _push r16;
         _push r17;
         _push r18;
@@ -164,6 +165,7 @@ emit_sub "eor_int", sub {
             _pop r18;
             _pop r17;
             _pop r16;
+            _pop r10;
             _reti;
         };
 
