@@ -210,15 +210,20 @@ emit_global_sub "main", sub {
     block {
         #wait for an input event and dequeue it
         dequeue_input_event;
-        #process the dequeued event
-        process_input_event;
+
+        block {
+            _brtc block_end;
+
+            #process the dequeued event
+            process_input_event;
+        };
 
         #and do it all over again
         _rjmp block_begin;
     };
 };
 
-#Waits for an input event and dequeues it into r16
+#Checks for an input event, and dequeues it into r16 if available
 sub dequeue_input_event {
     block {
         _cli;
@@ -233,10 +238,14 @@ sub dequeue_input_event {
 
             _ld r16, "z+";
             _sts "button_event_head", zl;
+            #set T flag to indicate that we have an event to process
+            _set;
             _sei;
             _rjmp block_end parent;
         };
 
+        #clear the T flag to indicate that there is no event to process
+        _clt;
         _sei;
         _rjmp block_begin;
     };
