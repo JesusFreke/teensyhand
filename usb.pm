@@ -465,21 +465,23 @@ emit_sub "eor_int", sub {
             };
 
             emit_sub "hid_get_report", sub {
-                #TODO: we should return the actual current input state here
-                #For now, we'll just return a blank report
-                USB_WAIT_FOR_TXINI r24;
-                _clr r17;
-                _ldi r16, 21;
+                #if more than 255 bytes are requested, round down to 255
+                #(i.e. set the low byte to 255 - the high byte is otherwise ignored)
+                _cpse $r23_wLength_hi, r15_zero;
+                _ldi $r22_wLength_lo, 0xff;
 
+                #check if the requested number of bytes is less than the report length
                 block {
-                    _sts UEDATX, r17;
-                    _dec r16;
-                    _brne block_begin;
+                    _cpi $r22_wLength_lo, 0x15;
+                    _brlo block_end;
+                    _ldi $r22_wLength_lo, 0x15;
                 };
 
-                #send the data
-                USB_SEND_QUEUED_DATA r16;
-                _rjmp "usb_enp_end";
+                #TODO: we don't currently protect current_report when writing
+                _ldi zl, lo8("current_report");
+                _ldi zh, hi8("current_report");
+
+                _rjmp "usb_send_memory_data_short";
             };
 
             emit_sub "hid_get_idle", sub {
