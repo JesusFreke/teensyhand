@@ -78,7 +78,7 @@ BEGIN {
     #button is pressed
     memory_variable "release_table", 104;
 
-
+    emit "end_bss:\n";
 
     emit ".text\n";
 }
@@ -190,14 +190,14 @@ emit_global_sub "main", sub {
     _ldi zl, 0x00;
     _ldi zh, 0x01;
 
-    #reset all memory to 0s
+    #reset all allocated memory to 0
     block {
         _st "z+", r15_zero;
 
-        _cpi zl, 0x00;
+        _cpi zl, lo8("end_bss");
         _brne block_begin;
 
-        _cpi zh, 0x21;
+        _cpi zh, hi8("end_bss");
         _brne block_begin;
     };
 
