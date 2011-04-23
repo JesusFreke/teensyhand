@@ -5,10 +5,6 @@ use constant HID_LED_CAPS_LOCK => 1;
 use constant HID_LED_SCROLL_LOCK => 2;
 
 sub usb_init {
-    #initialize hid idle period to 500ms (125*4ms)
-    _ldi r16, 125;
-    _sts "hid_idle_period", r16;
-
     #enable usb pad regulator and select usb device mode
     _ldi r16, MASK(UIMOD) | MASK(UVREGE);
     _sts UHWCON, r16;
@@ -76,11 +72,10 @@ emit_global_sub "usb_gen", sub {
     _lds r16, UENUM;
     _push r16;
 
-
     #check for End of Reset interrupt
     _lds r16, UDINT;
     _sbrc r16, EORSTI;
-    _call "eor_int";
+    _rjmp "eor_int";
 
     #check for Start of Frame interrupt
     _lds r16, UDINT;
@@ -122,16 +117,26 @@ emit_sub "eor_int", sub {
     _ldi r16, MASK(RXSTPE);
     _sts UEIENX, r16;
 
-    #initialize the idle rate to 500ms
-    _ldi r16, 0xF4;
-    _sts "hid_idle_period", r16;
-    _sts "hid_idle_ms_remaining", r16;
+    _call "reset";
 
-    _ldi r16, 0x01;
-    _sts "hid_idle_period + 1", r16;
-    _sts "hid_idle_ms_remaining + 1", r16;
+    #clear USB device interrupts
+    _ldi r16, 0;
+    _sts UDINT, r16;
 
-    _ret;
+    #reset the stack pointer
+    _ldi r16, 0xFF;
+    _sts SPL, r16;
+
+    _ldi r16, 0x20;
+    _sts SPH, r16;
+
+    #jump back to the main loop on return
+    _ldi r16, lo8(pm("main_loop"));
+    _push r16;
+    _ldi r16, hi8(pm("main_loop"));
+    _push r16;
+
+    _reti;
 };
 
 #this occurs when we receiver a usb start of frame packet, which occurs reliably every 1ms

@@ -323,6 +323,9 @@ use constant PLLE => 1;
 use constant PLL_4 => 0b011 << 2;
 use constant PLL_8 => 0b101 << 2;
 
+use constant SPL => 0x5d;
+use constant SPH => 0x5e;
+
 use constant SREG => 0x5f;
 use constant BIT_C => 0;
 use constant BIT_Z => 1;

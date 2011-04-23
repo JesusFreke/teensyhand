@@ -123,6 +123,14 @@ sub process_input_event;
 sub process_hid_idle;
 
 emit_global_sub "main", sub {
+    #initialize the stack pointer
+    _ldi r16, 0xFF;
+    _sts SPL, r16;
+
+    _ldi r16, 0x20;
+    _sts SPH, r16;
+
+    #set clock to max speed (16mhz)
     SET_CLOCK_SPEED r16, CLOCK_DIV_1;
 
     CONFIGURE_GPIO(port=>GPIO_PORT_A, pin=>PIN_0, dir=>GPIO_DIR_IN, pullup=>GPIO_PULLUP_ENABLED);
@@ -179,34 +187,10 @@ emit_global_sub "main", sub {
     CONFIGURE_GPIO(port=>GPIO_PORT_F, pin=>PIN_6, dir=>GPIO_DIR_IN, pullup=>GPIO_PULLUP_ENABLED);
     CONFIGURE_GPIO(port=>GPIO_PORT_F, pin=>PIN_7, dir=>GPIO_DIR_IN, pullup=>GPIO_PULLUP_ENABLED);
 
-    #clear all LEDs
-    _ldi r16, 0xFF;
-    _out IO(PORTC), r16;
-    _sts "persistent_mode_leds", r16;
-
     #initialize register with commonly used "zero" value
     _clr r15_zero;
 
-    _ldi zl, 0x00;
-    _ldi zh, 0x01;
-
-    #reset all allocated memory to 0
-    block {
-        _st "z+", r15_zero;
-
-        _cpi zl, lo8("end_bss");
-        _brne block_begin;
-
-        _cpi zh, hi8("end_bss");
-        _brne block_begin;
-    };
-
-    _ldi r16, 0x01;
-    _sts "key_array_offset", r16;
-    _sts "current_protocol", r16;
-
-    _ldi r16, 0x14;
-    _sts "key_array_length", r16;
+    _call "reset";
 
     usb_init();
 
@@ -218,6 +202,66 @@ emit_global_sub "main", sub {
     #enable interrupts
     _sei;
 
+    emit_sub "main_loop", sub {
+        block {
+            _lds r16, "current_configuration";
+            _cpi r16, 0;
+            _breq block_begin;
+
+            #wait for an input event and dequeue it
+            dequeue_input_event;
+
+            block {
+                _brtc block_end;
+
+                #process the dequeued event
+                process_input_event;
+            };
+
+            process_hid_idle;
+
+            #and do it all over again
+            _rjmp block_begin;
+        };
+    };
+};
+
+emit_sub "reset", sub {
+    #clear all LEDs
+    _ldi r16, 0xFF;
+    _out IO(PORTC), r16;
+    _sts "persistent_mode_leds", r16;
+
+    #reset all allocated memory to 0
+    _ldi zl, 0x00;
+    _ldi zh, 0x01;
+    block {
+        _st "z+", r15_zero;
+
+        _cpi zl, lo8("end_bss");
+        _brne block_begin;
+
+        _cpi zh, hi8("end_bss");
+        _brne block_begin;
+    };
+
+    #misc initialization
+    _ldi r16, 0x01;
+    _sts "key_array_offset", r16;
+    _sts "current_protocol", r16;
+
+    _ldi r16, 0x14;
+    _sts "key_array_length", r16;
+
+    #initialize the idle rate to 500ms
+    _ldi r16, 0xF4;
+    _sts "hid_idle_period", r16;
+    _sts "hid_idle_ms_remaining", r16;
+
+    _ldi r16, 0x01;
+    _sts "hid_idle_period + 1", r16;
+    _sts "hid_idle_ms_remaining + 1", r16;
+
     #initialize the press tables
     _ldi r16, lo8(press_table_label("normal"));
     _sts "current_press_table", r16;
@@ -227,26 +271,7 @@ emit_global_sub "main", sub {
     _sts "current_press_table + 1", r16;
     _sts "persistent_mode_press_table + 1", r16;
 
-    block {
-        _lds r16, "current_configuration";
-        _cpi r16, 0;
-        _breq block_begin;
-
-        #wait for an input event and dequeue it
-        dequeue_input_event;
-
-        block {
-            _brtc block_end;
-
-            #process the dequeued event
-            process_input_event;
-        };
-
-        process_hid_idle;
-
-        #and do it all over again
-        _rjmp block_begin;
-    };
+    _ret;
 };
 
 #Checks for an input event, and dequeues it into r16 if available
