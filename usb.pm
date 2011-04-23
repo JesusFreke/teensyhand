@@ -563,7 +563,18 @@ emit_sub "sof_int", sub {
             };
 
             emit_sub "hid_get_protocol", sub {
-                _rjmp "usb_stall";
+                block {
+                    USB_WAIT_FOR_TXINI r24;
+
+                    _cpi $r22_wLength_lo, 0;
+                    _breq block_end;
+
+                    _lds r16, "current_protocol";
+                    _sts UEDATX, r16;
+                };
+
+                USB_SEND_QUEUED_DATA r16;
+                _rjmp "usb_enp_end";
             };
 
             emit_sub "hid_set_report", sub {
@@ -624,6 +635,37 @@ emit_sub "sof_int", sub {
             };
 
             emit_sub "hid_set_protocol", sub {
+                #the low byte of wValue contains the protocol. 0=boot, 1=report
+                block {
+                    _cpi $r18_wValue_lo, 0;
+                    _brne block_end;
+
+                    #it's the boot protocol
+                    _sts "current_protocol", $r18_wValue_lo;
+
+                    _ldi r16, 0x02;
+                    _sts "key_array_offset", r16;
+
+                    _ldi r16, 0x06;
+                    _sts "key_array_length", r16;
+
+                    _rjmp "usb_send_zlp";
+                };
+                block {
+                    _cpi $r18_wValue_lo, 1;
+                    _brne block_end;
+
+                    #it's the report protocol
+                    _sts "current_protocol", $r18_wValue_lo;
+
+                    _ldi r16, 0x01;
+                    _sts "key_array_offset", r16;
+
+                    _ldi r16, 0x14;
+                    _sts "key_array_length", r16;
+
+                    _rjmp "usb_send_zlp";
+                };
                 _rjmp "usb_stall";
             };
 

@@ -272,8 +272,8 @@ descriptor("DESCRIPTORS",
 			byte 0x00,				#bAlternateSetting
 			byte 0x01,				#bNumEndpoints
 			byte 0x03, 				#bInterfaceClass - HID class
-			byte 0x00, 				#bInterfaceSubClass - no subclass (yet)
-			byte 0x00,				#bInterfaceProtocol - no protocol (yet)
+			byte 0x01, 				#bInterfaceSubClass - boot subclass
+			byte 0x01,				#bInterfaceProtocol - keyboard protocol
 			byte 0x05				#iInterface
 		),
 		descriptor("HID_DESCRIPTOR",

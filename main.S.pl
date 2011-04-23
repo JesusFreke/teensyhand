@@ -28,6 +28,9 @@ BEGIN {
     #done in begin section, so that declared constants can be accessed further down
     memory_variable "current_configuration";
 
+    #the current protocol (0=boot, 1=report)
+    memory_variable "current_protocol";
+
     #the current idle period, in ms
     memory_variable "hid_idle_period", 2;
 
@@ -41,6 +44,11 @@ BEGIN {
 
     #contains the current state of the hid report
     memory_variable "current_report", 21;
+
+    #the offset and length of the key array in the report
+    #This is needed to be able to switch between the boot and report protocols
+    memory_variable "key_array_offset", 1;
+    memory_variable "key_array_length", 1;
 
     #An array with an entry for each modifier key, which contains a count of the number
     #of keys currently pressed that "virtually" press that modifier key (like the # key,
@@ -192,6 +200,13 @@ emit_global_sub "main", sub {
         _cpi zh, 0x21;
         _brne block_begin;
     };
+
+    _ldi r16, 0x01;
+    _sts "key_array_offset", r16;
+    _sts "current_protocol", r16;
+
+    _ldi r16, 0x14;
+    _sts "key_array_length", r16;
 
     usb_init();
 

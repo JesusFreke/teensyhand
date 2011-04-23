@@ -262,11 +262,19 @@ sub generate_key_maps {
 #r16 should contain the keycode to send
 emit_sub "send_keycode_press", sub {
     #find the first 0 in the button array in current_report, and store the new keycode there
-    _ldi zl, lo8("current_report+1");
-    _ldi zh, hi8("current_report+1");
+    _ldi zl, lo8("current_report");
+    _ldi zh, hi8("current_report");
 
+    _lds r24, "key_array_offset";
+    _lds r25, "key_array_length";
+
+    #calculate the first address
+    _add zl, r24;
+    _adc zh, r15_zero;
+
+    #calculate the last address (we only care about the last byte)
     _mov r24, zl;
-    _adiw r24, 0x20;
+    _add r24, r25;
 
     #TODO: we need to handle duplicate keys. e.g. if two buttons are pressed
     #and one is a shifted variant of the other
@@ -298,11 +306,19 @@ emit_sub "send_keycode_press", sub {
 #r16 should contain the keycode to release
 emit_sub "send_keycode_release", sub {
     #find the keycode in button array in current_report, and zero it out
-    _ldi zl, lo8("current_report + 1");
-    _ldi zh, hi8("current_report + 1");
+    _ldi zl, lo8("current_report");
+    _ldi zh, hi8("current_report");
 
+    _lds r24, "key_array_offset";
+    _lds r25, "key_array_length";
+
+    #calculate the first address
+    _add zl, r24;
+    _adc zh, r15_zero;
+
+    #calculate the last address (we only care about the last byte)
     _mov r24, zl;
-    _adiw r24, 0x20;
+    _add r24, r25;
 
     block {
         _ld r17, "z+";
@@ -403,7 +419,9 @@ emit_sub "send_hid_report", sub {
     _ldi zl, lo8("current_report");
     _ldi zh, hi8("current_report");
 
-    _ldi r17, 21;
+    _lds r17, "key_array_offset";
+    _lds r24, "key_array_length";
+    _add r17, r24;
 
     block {
         _ld r18, "z+";
