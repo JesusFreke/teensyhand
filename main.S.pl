@@ -227,22 +227,11 @@ emit_global_sub "main", sub {
     _sts "current_press_table + 1", r16;
     _sts "persistent_mode_press_table + 1", r16;
 
-    #wait until usb is configured
     block {
         _lds r16, "current_configuration";
         _cpi r16, 0;
         _breq block_begin;
-    };
 
-    #wait for another 5ms, just to be sure
-    _ldi r24, 0x13;
-    _ldi r25, 0x13;
-    block {
-        _sbiw r24, 1;
-        _brne block_begin;
-    };
-
-    block {
         #wait for an input event and dequeue it
         dequeue_input_event;
 
