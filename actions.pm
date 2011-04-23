@@ -939,6 +939,71 @@ sub undefined_action {
     }
 }
 
+sub type_mem_byte {
+    my($mem_location) = shift;
+
+    my($emitted) = 0;
+    my($labels);
+
+    return sub {
+        if (!$emitted) {
+            my($press_label) = unique_label("type_mem_byte_press_action");
+            my($release_label) = unique_label("type_mem_byte_release_action");
+
+            emit_sub $press_label, sub {
+                _ldi zl, lo8($mem_location);
+                _ldi zh, hi8($mem_location);
+
+                _ldi r16, lo8(pm($release_label));
+                _ldi r17, hi8(pm($release_label));
+
+                _rjmp "handle_type_mem_byte_press";
+            };
+
+            emit_sub $release_label, sub {
+                _ret;
+            };
+
+            $labels = [$release_label, $press_label];
+            $emitted = 1;
+        }
+
+        return $labels;
+    }
+}
+
+#Sends a single byte as binary, using a series of '0' and '1' keystrokes
+#zl:zh      the address of the byte to send
+#r16:r17    the address for the release routine
+#y          the location in the release table to store the release pointer
+emit_sub "handle_type_mem_byte_press", sub {
+    #update the release table
+    _st "y+", r16;
+    _st "y", r17;
+
+    _ld r20, "z";
+
+    for (my($i)=0; $i<8; $i++) {
+        block {
+            _lsl r20;
+            block {
+                _brcc block_end;
+
+                _ldi r16, 0x1E; #keycode for '1' key
+                _call "send_keycode_press";
+                _call "send_keycode_release";
+
+                _rjmp block_end parent;
+            };
+
+            _ldi r16, 0x27; #keycode for '0' key
+            _call "send_keycode_press";
+            _call "send_keycode_release";
+        }
+    };
+    _ret;
+};
+
 #handle the press of a persistent mode key
 #r16:r17    the address for the release routine
 #y          the location in the release table to store the release pointer
