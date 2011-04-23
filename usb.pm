@@ -695,7 +695,7 @@ emit_sub "sof_int", sub {
                 _cli;
 
                 #disable usb
-                _ldi r16, 1;
+                _ldi r16, MASK(DETACH);
                 _sts UDCON, r16;
 
                 _ldi r16, MASK(FRZCLK);
