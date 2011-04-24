@@ -437,6 +437,31 @@ emit_sub "sof_int", sub {
             };
 
             emit_sub "setup_set_feature", sub {
+                block {
+                    _cpi $r16_bmRequestType, SETUP_HOST_TO_DEVICE | SETUP_TYPE_STANDARD | SETUP_RECIPIENT_ENDPOINT;
+                    _brne block_end;
+
+                    _lds r16, "current_configuration";
+                    _cpi r16, 0;
+                    _breq block_end;
+
+                    _cpi $r20_wIndex_lo, 1;
+                    _cpc $r21_wIndex_hi, r15_zero;
+                    _brne block_end;
+
+                    _cpi $r18_wValue_lo, FEATURE_ENDPOINT_HALT;
+                    _cpc $r19_wValue_hi, r15_zero;
+                    _brne block_end;
+
+                    SELECT_EP r16, EP_1;
+
+                    _lds r16, UECONX;
+                    _sbr r16, MASK(STALLRQ);
+                    _sts UECONX, r16;
+
+                    SELECT_EP r16, EP_0;
+                    _rjmp "usb_send_zlp";
+                };
                 _rjmp "usb_stall";
             };
 
