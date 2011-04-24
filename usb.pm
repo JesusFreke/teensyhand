@@ -470,6 +470,10 @@ emit_sub "sof_int", sub {
                     _cpi $r16_bmRequestType, 0b00000000;
                     _brne block_end;
 
+                    _lds r16, "current_configuration";
+                    _cpi r16, 0;
+                    _brne block_end;
+
                     _cpi $r19_wValue_hi, 0;
                     _brne block_end;
 
