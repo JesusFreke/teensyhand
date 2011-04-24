@@ -641,9 +641,14 @@ emit_sub "sof_int", sub {
 
                         #if we're already configured, and are going back to a non-configured state, we need to
                         #reset our state and disable EP1
-                        _lds r16, "current_configuration";
-                        _cpi r16, 0;
-                        _breq block_end;
+                        block {
+                            _lds r16, "current_configuration";
+                            _cpi r16, 0;
+                            _brne block_end;
+
+                            #nothing to do
+                            _rjmp "usb_send_zlp";
+                        };
 
                         _call "reset";
 
@@ -677,7 +682,7 @@ emit_sub "sof_int", sub {
                     _sts "current_configuration", $r18_wValue_lo;
 
                     #enable ep1
-                    _ldi r16, MASK(EPEN);
+                    _ldi r16, MASK(EPEN) | MASK(STALLRQC) | MASK(RSTDT);
                     _sts UECONX, r16;
 
                     #configure ep1
