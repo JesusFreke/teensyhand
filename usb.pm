@@ -493,7 +493,6 @@ emit_sub "sof_int", sub {
 
                     _rjmp "usb_enp_end";
                 };
-                _sbi IO(PORTD), 6;
                 _rjmp "usb_stall";
             };
 
