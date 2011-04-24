@@ -4,6 +4,18 @@ use constant HID_LED_NUM_LOCK => 0;
 use constant HID_LED_CAPS_LOCK => 1;
 use constant HID_LED_SCROLL_LOCK => 2;
 
+use constant SETUP_HOST_TO_DEVICE => 0 << 7;
+use constant SETUP_DEVICE_TO_HOST => 1 << 7;
+
+use constant SETUP_TYPE_STANDARD => 0 << 5;
+use constant SETUP_TYPE_CLASS => 1 << 5;
+use constant SETUP_TYPE_VENDOR => 2 << 5;
+
+use constant SETUP_RECIPIENT_DEVICE => 0;
+use constant SETUP_RECIPIENT_INTERFACE => 1;
+use constant SETUP_RECIPIENT_ENDPOINT => 2;
+use constant SETUP_RECIPIENT_OTHER => 3;
+
 sub usb_init {
     #enable usb pad regulator and select usb device mode
     _ldi r16, MASK(UIMOD) | MASK(UVREGE);
@@ -316,6 +328,78 @@ emit_sub "sof_int", sub {
             };
 
             emit_sub "setup_get_status", sub {
+                block {
+                    block {
+                        _cpi $r16_bmRequestType, SETUP_DEVICE_TO_HOST | SETUP_TYPE_STANDARD | SETUP_RECIPIENT_DEVICE;
+                        _brne block_end;
+
+                        _sts UEDATX, r15_zero;
+                        _sts UEDATX, r15_zero;
+
+                        USB_SEND_QUEUED_DATA r16;
+                        _rjmp "usb_enp_end";
+                    };
+                    block {
+                        _cpi $r16_bmRequestType, SETUP_DEVICE_TO_HOST | SETUP_TYPE_STANDARD | SETUP_RECIPIENT_INTERFACE;
+                        _brne block_end;
+
+                        _cp $r20_wIndex_lo, r15_zero;
+                        _cpc $r21_wIndex_hi, r15_zero;
+                        _brne block_end parent;
+
+                        _lds r16, "current_configuration";
+                        _cpi r16, 0;
+                        _breq block_end parent;
+
+                        _sts UEDATX, r15_zero;
+                        _sts UEDATX, r15_zero;
+
+                        USB_SEND_QUEUED_DATA r16;
+                        _rjmp "usb_enp_end";
+                    };
+                    block {
+                        _cpi $r16_bmRequestType, SETUP_DEVICE_TO_HOST | SETUP_TYPE_STANDARD | SETUP_RECIPIENT_ENDPOINT;
+                        _brne block_end;
+
+                        block {
+                            #is it endpoint 1?
+                            _cpi $r20_wIndex_lo, 1;
+                            _cpc $r21_wIndex_hi, r15_zero;
+                            _brne block_end;
+
+                            _lds r16, "current_configuration";
+                            _cpi r16, 0;
+                            _breq block_end parent;
+
+                            SELECT_EP r16, EP_1;
+                            _lds r16, UECONX;
+                            _bst r16, STALLRQ;
+
+                            _clr r17;
+                            _bld r17, 0;
+
+                            SELECT_EP r16, EP_0;
+
+                            _sts UEDATX, r17;
+                            _sts UEDATX, r15_zero;
+
+                            USB_SEND_QUEUED_DATA r16;
+                            _rjmp "usb_enp_end";
+                        };
+                        block {
+                            #is it endpoint 0?
+                            _cp $r20_wIndex_lo, r15_zero;
+                            _cpc $r21_wIndex_hi, r15_zero;
+                            _brne block_end;
+
+                            _sts UEDATX, r15_zero;
+                            _sts UEDATX, r15_zero;
+
+                            USB_SEND_QUEUED_DATA r16;
+                            _rjmp "usb_enp_end";
+                        };
+                    };
+                };
                 _rjmp "usb_stall";
             };
 
