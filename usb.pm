@@ -627,30 +627,77 @@ emit_sub "sof_int", sub {
             };
 
             emit_sub "setup_set_configuration", sub {
-                _sts "current_configuration", $r18_wValue_lo;
+                block {
+                    _cpi $r16_bmRequestType, SETUP_HOST_TO_DEVICE | SETUP_TYPE_STANDARD | SETUP_RECIPIENT_DEVICE;
+                    _brne block_end;
 
-                SELECT_EP r16, EP_1;
+                    _lds r16, UDADDR;
+                    _sbrs r16, ADDEN;
+                    _rjmp block_end;
 
-                #enable ep1
-                _ldi r16, MASK(EPEN);
-                _sts UECONX, r16;
+                    block {
+                        _cpi $r18_wValue_lo, 0;
+                        _brne block_end;
 
-                #configure ep1
-                _ldi r16, EPTYPE_INT | EPDIR_IN;
-                _sts UECFG0X, r16;
+                        #if we're already configured, and are going back to a non-configured state, we need to
+                        #reset our state and disable EP1
+                        _lds r16, "current_configuration";
+                        _cpi r16, 0;
+                        _breq block_end;
 
-                _ldi r16, EPSIZE_32 | EPBANK_SINGLE | MASK(ALLOC);
-                _sts UECFG1X, r16;
+                        _call "reset";
 
-                #initialize LEDs
-                _ldi r16, INVERSE_MASK(LED_NORMAL);
-                _out IO(PORTC), r16;
-                _sts "persistent_mode_leds", r16;
+                        SELECT_EP r16, EP_1;
+                        _sts UECONX, r15_zero;
 
-                #re-select ep0
-                SELECT_EP r16, EP_0;
+                        #reset the stack pointer
+                        _ldi r16, 0xFF;
+                        _sts SPL, r16;
 
-                _rjmp "usb_send_zlp";
+                        _ldi r16, 0x20;
+                        _sts SPH, r16;
+
+                        #jump back to the main loop on return
+                        _ldi r16, lo8(pm("main_loop"));
+                        _push r16;
+                        _ldi r16, hi8(pm("main_loop"));
+                        _push r16;
+
+                        SELECT_EP r16, EP_0;
+                        USB_SEND_ZLP r24;
+
+                        _reti;
+                    };
+
+                    _cpi $r18_wValue_lo, 1;
+                    _brne block_end;
+
+                    SELECT_EP r16, EP_1;
+
+                    _sts "current_configuration", $r18_wValue_lo;
+
+                    #enable ep1
+                    _ldi r16, MASK(EPEN);
+                    _sts UECONX, r16;
+
+                    #configure ep1
+                    _ldi r16, EPTYPE_INT | EPDIR_IN;
+                    _sts UECFG0X, r16;
+
+                    _ldi r16, EPSIZE_32 | EPBANK_SINGLE | MASK(ALLOC);
+                    _sts UECFG1X, r16;
+
+                    #initialize LEDs
+                    _ldi r16, INVERSE_MASK(LED_NORMAL);
+                    _out IO(PORTC), r16;
+                    _sts "persistent_mode_leds", r16;
+
+                    #re-select ep0
+                    SELECT_EP r16, EP_0;
+
+                    _rjmp "usb_send_zlp";
+                };
+                _rjmp "usb_stall";
             };
 
             emit_sub "setup_get_interface", sub {
