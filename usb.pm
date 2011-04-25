@@ -367,7 +367,7 @@ emit_sub "sof_int", sub {
 
                         block {
                             #is it endpoint 1?
-                            _cpi $r20_wIndex_lo, 1;
+                            _cpi $r20_wIndex_lo, 0x81;
                             _cpc $r21_wIndex_hi, r15_zero;
                             _brne block_end;
 
@@ -416,7 +416,7 @@ emit_sub "sof_int", sub {
                     _cpi r16, 0;
                     _breq block_end;
 
-                    _cpi $r20_wIndex_lo, 1;
+                    _cpi $r20_wIndex_lo, 0x81;
                     _cpc $r21_wIndex_hi, r15_zero;
                     _brne block_end;
 
@@ -445,7 +445,7 @@ emit_sub "sof_int", sub {
                     _cpi r16, 0;
                     _breq block_end;
 
-                    _cpi $r20_wIndex_lo, 1;
+                    _cpi $r20_wIndex_lo, 0x81;
                     _cpc $r21_wIndex_hi, r15_zero;
                     _brne block_end;
 
