@@ -520,6 +520,9 @@ emit_sub "sof_int", sub {
                     _cpi $r16_bmRequestType, 0b10000001;
                     _brne block_end;
 
+                    _cpi $r19_wValue_hi, DESC_HID;
+                    _breq "setup_get_hid_descriptor";
+
                     _cpi $r19_wValue_hi, DESC_HID_REPORT;
                     _breq "setup_get_hid_report_descriptor";
                 };
@@ -589,6 +592,21 @@ emit_sub "sof_int", sub {
                         _rjmp "usb_send_program_data_short";
                     };
                     _rjmp "usb_stall";
+                };
+
+                emit_sub "setup_get_hid_descriptor", sub {
+                    my($descriptor) = get_descriptor("HID_DESCRIPTOR");
+                    _ldi zl, lo8($descriptor->{name});
+                    _ldi zh, hi8($descriptor->{name});
+
+                    #check if the requested number of bytes is less than the descriptor length
+                    block {
+                        _cpi $r22_wLength_lo, $descriptor->{size};
+                        _brlo block_end;
+                        _ldi $r22_wLength_lo, $descriptor->{size};
+                    };
+
+                    _rjmp "usb_send_program_data_short";
                 };
 
                 emit_sub "setup_get_hid_report_descriptor", sub {
