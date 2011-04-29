@@ -801,7 +801,7 @@ emit_sub "sof_int", sub {
                 };
 
                 _in r16, IO(PORTC);
-                _ori r16, LH_LED_MASK;
+                _ori r16, HOST_LED_MASK;
 
                 _lds r17, UEDATX;
                 #invert the values, to match the "0 is on" logic of the LEDs

@@ -800,9 +800,9 @@ emit_sub "handle_temporary_mode_press", sub {
 
     #update the LEDs
     _in r16, IO(PORTC);
-    _ori r16, RH_LED_MASK;
-    #make sure we don't include any LH leds
-    _ori r22, LH_LED_MASK;
+    _ori r16, INVERSE_MASK(HOST_LED_MASK);
+    #make sure we don't include any of the host controlled leds
+    _ori r22, HOST_LED_MASK;
     _and r16, r22;
     _out IO(PORTC), r16;
 
@@ -835,9 +835,9 @@ emit_sub "handle_temporary_mode_release", sub {
         #restore the LEDs from persistent_mode_leds
         _in r16, IO(PORTC);
         _lds r17, "persistent_mode_leds";
-        _ori r16, RH_LED_MASK;
-        #make sure we don't include any LH leds
-        _ori r17, LH_LED_MASK;
+        _ori r16, INVERSE_MASK(HOST_LED_MASK);
+        #make sure we don't include any host-controlled leds
+        _ori r17, HOST_LED_MASK;
         _and r16, r17;
         _out IO(PORTC), r16;
     };
@@ -901,9 +901,9 @@ emit_sub "handle_persistent_mode_press", sub {
 
     #update the LEDs
     _in r16, IO(PORTC);
-    _ori r16, RH_LED_MASK;
-    #make sure we don't include any LH leds
-    _ori r20, LH_LED_MASK;
+    _ori r16, INVERSE_MASK(HOST_LED_MASK);
+    #make sure we don't include any host-controlled leds
+    _ori r20, HOST_LED_MASK;
     _and r16, r20;
     _out IO(PORTC), r16;
 

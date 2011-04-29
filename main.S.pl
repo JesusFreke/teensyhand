@@ -97,6 +97,7 @@ use constant RGUI_OFFSET => 7;
 
 use constant RH_LED_MASK => 0b00001111;
 use constant LH_LED_MASK => 0b11110000;
+use constant HOST_LED_MASK => 0b11010000;
 use constant LED_NAS => 0;
 use constant LED_NORMAL => 1;
 use constant LED_FUNC => 2;
