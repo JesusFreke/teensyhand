@@ -184,7 +184,27 @@ my(%action_map);
     $action_map{"down"} = simple_keycode(0x51);
     $action_map{"up"} = simple_keycode(0x52);
     $action_map{"numlock"} = simple_keycode(0x53);
+
+    $action_map{"kp/"} = simple_keycode(0x54);
+    $action_map{"kp*"} = simple_keycode(0x55);
+    $action_map{"kp-"} = simple_keycode(0x56);
+    $action_map{"kp+"} = simple_keycode(0x57);
+
+    #generate actions for for keypad 1-9
+    for (my($i)=1; $i<=9; $i++) {
+        $action_map{"kp$i"} = simple_keycode(0x59 + $i-1);
+    }
+    $action_map{"kp0"} = simple_keycode(0x62);
+    $action_map{"kp."} = simple_keycode(0x63);
+
     $action_map{"menu"} = simple_keycode(0x65);
+    $action_map{"kp="} = simple_keycode(0x67);
+
+    #generate actions for f13-f24
+    for(my($i)=0; $i<12; $i++) {
+        my($fnum) = $i+13;
+        $action_map{"f$fnum"} = simple_keycode(0x68 + $i);
+    }
 
     $action_map{"lctrl"} = modifier_keycode(0xe0);
     $action_map{"lshift"} = modifier_keycode(0xe1);
@@ -199,6 +219,10 @@ my(%action_map);
     $action_map{"naslock"} = persistent_mode_action("nas", INVERSE_MASK(LED_NAS));
     $action_map{"func"} = persistent_mode_action("func", INVERSE_MASK(LED_FUNC));
     $action_map{"norm"} = temporary_mode_action("normal_hold", INVERSE_MASK(LED_NORMAL) & INVERSE_MASK(LED_10K) , "normal", INVERSE_MASK(LED_NORMAL));
+    $action_map{"game"} = temporary_mode_action("game_hold", INVERSE_MASK(LED_MOUSE) & INVERSE_MASK(LED_10K), "game", INVERSE_MASK(LED_MOUSE));
+    $action_map{"game_mod_1"} = temporary_mode_action("game_mod_1",INVERSE_MASK(LED_MOUSE) & INVERSE_MASK(LED_10K) & INVERSE_MASK(LED_NAS));
+    $action_map{"game_mod_2"} = temporary_mode_action("game_mod_2",INVERSE_MASK(LED_MOUSE) & INVERSE_MASK(LED_10K) & INVERSE_MASK(LED_NORMAL));
+    $action_map{"game_mod_3"} = temporary_mode_action("game_mod_3",INVERSE_MASK(LED_MOUSE) & INVERSE_MASK(LED_10K) & INVERSE_MASK(LED_FUNC));
 
     $action_map{"ctrlx"} = modified_keycode(0x1b, LCTRL_OFFSET);
     $action_map{"ctrlc"} = modified_keycode(0x06, LCTRL_OFFSET);
