@@ -234,6 +234,8 @@ sub generate_key_maps {
     foreach my $key_map_name (keys(%{$key_maps})) {
         my($key_map) = $key_maps->{$key_map_name};
 
+        my($undefined_action_sub) = undefined_action();
+
         #iterate over each physical button, and lookup and emit the code for the
         #press and release actions for each
         my(@press_actions);
@@ -253,7 +255,7 @@ sub generate_key_maps {
             #get the name of the action associated with this particular button
             my($action_name) = $finger_map->{$finger_dir};
             if (!defined($action_name)) {
-                my($labels) = &{undefined_action()}($i);
+                my($labels) = &{$undefined_action_sub}($i);
                 push @press_actions, $labels->[BUTTON_PRESS];
                 push @release_actions, $labels->[BUTTON_RELEASE];
                 next;
