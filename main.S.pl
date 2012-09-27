@@ -466,7 +466,7 @@ my(%game_key_map) = (
     l3 => finger_map("o", ",", "x", "k", "esc"),
     l4 => finger_map("a", "/", "(", ";", "t"),
     #               d         dd          u       in       lo     uo
-    lt => thumb_map("lshift", "capslock", "game", "ret", "lctrl", "lalt")
+    lt => thumb_map("lshift", "capslock", "game", "sp", "lctrl", "lalt")
 );
 
 my(%game_hold_key_map) = (
