@@ -461,12 +461,12 @@ my(%game_key_map) = (
     rt => thumb_map(undef, undef, undef, "sp", undef, undef),
 
     #                 d   n      e      s      w
-    l1 => finger_map("u", "q", "i", "p", "\""),
+    l1 => finger_map("u", "q", "i", "p", "'"),
     l2 => finger_map("e", ".", "y", "j", "`"),
     l3 => finger_map("o", ",", "x", "k", "esc"),
-    l4 => finger_map("a", "/", "(", ";", "t"),
-    #               d         dd          u       in       lo     uo
-    lt => thumb_map("lshift", "capslock", "game", "sp", "lctrl", "lalt")
+    l4 => finger_map("a", "/", "n", ";", "t"),
+    #               d         dd          u       in    lo            uo
+    lt => thumb_map("lshift", "capslock", "game", "sp", "game_mod_1", "lalt")
 );
 
 my(%game_hold_key_map) = (
@@ -489,20 +489,20 @@ my(%game_hold_key_map) = (
 
 my(%game_mod_1_key_map) = (
     #                 d    n    e    s    w
-    r1 => finger_map("h", "g", "'", "m", "d"),
-    r2 => finger_map("t", "w", "`", "c", "f"),
-    r3 => finger_map("n", "v", undef, "r", "b"),
-    r4 => finger_map("s", "z", "\\", "l", ")"),
+    r1 => finger_map(undef, undef, undef, undef, undef),
+    r2 => finger_map(undef, undef, undef, undef, undef),
+    r3 => finger_map(undef, undef, undef, undef, undef),
+    r4 => finger_map(undef, undef, undef, undef, undef),
     #                d      dd         u       in    lo      uo
     rt => thumb_map("nas", "naslock", "func", "sp", "lalt", "bksp"),
 
     #                 d    n    e    s    w
-    l1 => finger_map("t", "u", "v", "w", "x"),
-    l2 => finger_map("y", "z", "1", "2", "3"),
-    l3 => finger_map("4", "5", "6", "7", "8"),
-    l4 => finger_map("9", "0", "-", "=", "["),
+    l1 => finger_map("4", undef, undef, undef, undef),
+    l2 => finger_map("3", undef, undef, undef, undef),
+    l3 => finger_map("2", undef, undef, undef, undef),
+    l4 => finger_map("1", undef, undef, undef, undef),
     #                d             dd          u       in     lo            uo
-    lt => thumb_map("game_mod_1", "capslock", "game", "ret", "game_mod_2", "game_mod_3")
+    lt => thumb_map("lshift", "capslock", "game", "sp", "game_mod_1", "lalt")
 );
 
 my(%game_mod_2_key_map) = (
