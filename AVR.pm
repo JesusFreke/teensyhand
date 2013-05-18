@@ -120,6 +120,9 @@ BEGIN {
         *$regname = sub () { $regname; };
     }
 
+    use constant xl => "r26";
+    use constant xh => "r27";
+
     use constant yl => "r28";
     use constant yh => "r29";
 

@@ -270,6 +270,14 @@ emit_sub "sof_int", sub {
             _cbr r24, MASK(RXSTPI) | MASK(RXOUTI) | MASK(TXINI);
             _sts UEINTX, r24;
 
+            if (BOOT_LOG_ENABLED) {
+                _mov r24, $r16_bmRequestType;
+                _call "write_boot_log";
+
+                _mov r24, $r17_bRequest;
+                _call "write_boot_log";
+            }
+
             #is it a class request?
             _sbrc $r16_bmRequestType, 5;
             _rjmp "handle_hid_packet";
@@ -1065,4 +1073,21 @@ emit_sub "sof_int", sub {
 
         _rjmp "usb_enp_end";
     };
+
+    if (BOOT_LOG_ENABLED) {
+        #Writes a byte to the boot log
+        #r24 should contain the byte to write to the boot log
+        #xh:xl will be clobbered on exit
+        emit_sub "write_boot_log", sub {
+            _lds xl, "boot_log_position";
+            _lds xh, "boot_log_position + 1";
+
+            _st "x+", r24;
+
+            _sts "boot_log_position", xl;
+            _sts "boot_log_position + 1", xh;
+
+            _ret;
+        };
+    }
 }

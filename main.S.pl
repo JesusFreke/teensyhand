@@ -80,6 +80,11 @@ BEGIN {
 
     emit "end_bss:\n";
 
+    # put boot log outside of bss, so that it doesn't get cleared on reset
+    memory_variable "boot_log_position", 2;
+
+    memory_variable "boot_log", 4*1024;
+
     emit ".text\n";
 }
 
@@ -106,6 +111,8 @@ use constant LED_CAPS_LOCK => 4;
 use constant LED_MOUSE => 5;
 use constant LED_NUM_LOCK => 6;
 use constant LED_SCROLL_LOCK => 7;
+
+use constant BOOT_LOG_ENABLED => 0;
 
 do "descriptors.pm";
 die $@ if ($@);
@@ -188,6 +195,15 @@ emit_global_sub "main", sub {
     CONFIGURE_GPIO(port=>GPIO_PORT_F, pin=>PIN_6, dir=>GPIO_DIR_IN, pullup=>GPIO_PULLUP_ENABLED);
     CONFIGURE_GPIO(port=>GPIO_PORT_F, pin=>PIN_7, dir=>GPIO_DIR_IN, pullup=>GPIO_PULLUP_ENABLED);
 
+    if (BOOT_LOG_ENABLED) {
+        #initialize the boot log
+        _ldi r16, lo8("boot_log");
+        _sts "boot_log_position", r16;
+
+        _ldi r16, hi8("boot_log");
+        _sts "boot_log_position + 1", r16;
+    }
+
     #initialize register with commonly used "zero" value
     _clr r15_zero;
 
@@ -228,6 +244,12 @@ emit_global_sub "main", sub {
 };
 
 emit_sub "reset", sub {
+    if (BOOT_LOG_ENABLED) {
+        _ldi r24, 0xff;
+        _call "write_boot_log";
+        _call "write_boot_log";
+    }
+
     #clear all LEDs
     _ldi r16, 0xFF;
     _out IO(PORTC), r16;
