@@ -25,7 +25,7 @@ main.S: AVR.pm usb.pm timer.pm actions.pm descriptors.pm
 	@avr-objdump --disassemble $< > $@
 
 $(MODULE).elf : $(MODULE).ld $(OBJS)
-	@avr-gcc -nostdlib -mmcu=at90usb1286 -Wl,-T$(MODULE).ld $(OBJS) -o $@
+	@avr-gcc -nostdlib -mmcu=at90usb1286 -Wl,-T$(MODULE).ld,-Map=$(MODULE).map $(OBJS) -o $@
 
 $(MODULE).hex : $(MODULE).elf
 	@avr-objcopy -j .text -O ihex $< $@
