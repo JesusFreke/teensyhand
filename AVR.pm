@@ -516,6 +516,10 @@ sub INVERSE_MASK {
     return ~(1 << $_[0]) & 0xFF;
 }
 
+sub INVERSE_BYTE {
+    return ~$_[0] & 0xFF
+}
+
 sub SET_CLOCK_SPEED {
     my($tempreg, $div) = @_;
 
