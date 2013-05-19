@@ -867,9 +867,6 @@ emit_sub "sof_int", sub {
                     #it's the boot protocol
                     _sts "current_protocol", $r18_wValue_lo;
 
-                    _ldi r16, 0x02;
-                    _sts "key_array_offset", r16;
-
                     _ldi r16, 0x06;
                     _sts "key_array_length", r16;
 
@@ -881,9 +878,6 @@ emit_sub "sof_int", sub {
 
                     #it's the report protocol
                     _sts "current_protocol", $r18_wValue_lo;
-
-                    _ldi r16, 0x01;
-                    _sts "key_array_offset", r16;
 
                     _ldi r16, 0x14;
                     _sts "key_array_length", r16;

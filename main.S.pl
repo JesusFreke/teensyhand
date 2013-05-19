@@ -43,11 +43,10 @@ BEGIN {
     memory_variable "button_states", 13;
 
     #contains the current state of the hid report
-    memory_variable "current_report", 21;
+    memory_variable "current_report", 22;
 
-    #the offset and length of the key array in the report
+    #the length of the key array in the report
     #This is needed to be able to switch between the boot and report protocols
-    memory_variable "key_array_offset", 1;
     memory_variable "key_array_length", 1;
 
     #An array with an entry for each modifier key, which contains a count of the number
@@ -113,6 +112,8 @@ use constant LED_NUM_LOCK => 6;
 use constant LED_SCROLL_LOCK => 7;
 
 use constant BOOT_LOG_ENABLED => 0;
+
+use constant KEY_ARRAY_OFFSET => 2;
 
 do "descriptors.pm";
 die $@ if ($@);
@@ -268,9 +269,8 @@ emit_sub "reset", sub {
         _brne block_begin;
     };
 
-    #misc initialization
+    #initialize the protocol
     _ldi r16, 0x01;
-    _sts "key_array_offset", r16;
     _sts "current_protocol", r16;
 
     _ldi r16, 0x14;

@@ -291,7 +291,7 @@ emit_sub "send_keycode_press", sub {
     _ldi zl, lo8("current_report");
     _ldi zh, hi8("current_report");
 
-    _lds r24, "key_array_offset";
+    _ldi r24, KEY_ARRAY_OFFSET;
     _lds r25, "key_array_length";
 
     #calculate the first address
@@ -335,7 +335,7 @@ emit_sub "send_keycode_release", sub {
     _ldi zl, lo8("current_report");
     _ldi zh, hi8("current_report");
 
-    _lds r24, "key_array_offset";
+    _ldi r24, KEY_ARRAY_OFFSET;
     _lds r25, "key_array_length";
 
     #calculate the first address
@@ -445,7 +445,7 @@ emit_sub "send_hid_report", sub {
     _ldi zl, lo8("current_report");
     _ldi zh, hi8("current_report");
 
-    _lds r17, "key_array_offset";
+    _ldi r17, KEY_ARRAY_OFFSET;
     _lds r24, "key_array_length";
     _add r17, r24;
 

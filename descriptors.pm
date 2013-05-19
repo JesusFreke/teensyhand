@@ -290,7 +290,7 @@ descriptor("DESCRIPTORS",
 			byte DESC_ENDPOINT,				#bDescriptorType
 			byte (ENDPOINT_DIR_IN | 0x01),	#bEndpointAddress
 			byte ENDPOINT_TYPE_INTERRUPT,	#bmAttributes
-			word 0x20,						#wMaxPacketSize
+			word 0x21,						#wMaxPacketSize
 			byte 1							#bInterval - 1ms polling period
 		)
 	),
@@ -338,6 +338,19 @@ descriptor("DESCRIPTORS",
             #Input item (variable)
             byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_INPUT),
             byte(MAIN_ITEM_VARIABLE),
+
+            #----------Reserved Byte----------
+            #Report size
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_SIZE),
+            byte(0x08),
+
+            #Report count - 1 reserved byte for compatibility with boot protocol
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_GLOBAL | GLOBAL_ITEM_REPORT_COUNT),
+            byte(0x01),
+
+            #Input item (array)
+            byte(HID_ITEM_DATA_SIZE_1 | HID_ITEM_TYPE_MAIN | MAIN_ITEM_INPUT),
+            byte(MAIN_ITEM_CONSTANT),
 
             #-----------Button Array----------
             #Report size
