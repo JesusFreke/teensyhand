@@ -485,12 +485,12 @@ my(%game_key_map) = (
     rt => thumb_map("nas", "naslock", "func", "sp", "lalt", "bksp"),
 
     #                 d    n    e    s    w
-    l1 => finger_map("u", "q", "i", "p", "\""),
-    l2 => finger_map("e", ".", "y", "j", "`"),
-    l3 => finger_map("o", ",", "x", "k", "esc"),
+    l1 => finger_map("w", "g", "i", "home", "\""),
+    l2 => finger_map("d", "e", "y", "c", "`"),
+    l3 => finger_map("s", "q", "x", "k", "esc"),
     l4 => finger_map("a", "/", "[", ";", "del"),
     #                d         dd          u       in     lo       uo
-    lt => thumb_map("lshift", "capslock", "game", "ret", "game_mod_2", "game_mod_1")
+    lt => thumb_map("lshift", "capslock", "game", "sp", "lctrl", "game_mod_1")
 );
 
 my(%game_hold_key_map) = (
@@ -526,7 +526,7 @@ my(%game_mod_1_key_map) = (
     l3 => finger_map("2", "f2", "f10", "7", "f6"),
     l4 => finger_map("1", "f1", "f9", "6", "f5"),
     #                d         dd          u       in     lo       uo
-    lt => thumb_map("lshift", "capslock", "game", "sp", "game_mod_2", "game_mod_1")
+    lt => thumb_map("lshift", "capslock", "game", "sp", "lctrl", "game_mod_1")
 );
 
 my(%game_mod_2_key_map) = (
